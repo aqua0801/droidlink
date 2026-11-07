@@ -1,0 +1,52 @@
+﻿# ---- Gradle / Kotlin ----
+.gradle/
+.kotlin/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# ---- Local machine config (SDK path, secrets) ----
+local.properties
+secrets.properties
+
+# ---- IDE (Android Studio / IntelliJ / VS Code) ----
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+.vscode/
+.fleet/
+
+# ---- Android ----
+/captures
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.ap_
+*.dex
+output-metadata.json
+lint/intermediates/
+lint/generated/
+lint/outputs/
+lint/tmp/
+
+# ---- Signing keys (never commit) ----
+*.jks
+*.keystore
+keystore.properties
+google-services.json
+
+# ---- Runtime data (device identity / trusted peers) ----
+identity.json
+trusted-devices.json
+
+# ---- Logs / crash dumps ----
+*.log
+hs_err_pid*
+replay_pid*
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
+desktop.ini
