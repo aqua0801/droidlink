@@ -3,6 +3,7 @@ package io.github.aqua0801.droidlink.link
 import android.content.Context
 import io.github.aqua0801.droidlink.AppGraph
 import io.github.aqua0801.droidlink.BuildConfig
+import io.github.aqua0801.droidlink.R
 import io.github.aqua0801.droidlink.data.PairedPc
 import io.github.aqua0801.droidlink.service.LinkService
 import io.github.aqua0801.droidlink.shared.crypto.Fingerprint
@@ -11,6 +12,7 @@ import io.github.aqua0801.droidlink.shared.link.LinkRejectedException
 import io.github.aqua0801.droidlink.shared.link.LinkSession
 import io.github.aqua0801.droidlink.shared.link.ServerIdentityMismatchException
 import io.github.aqua0801.droidlink.shared.pairing.PairingInfo
+import io.github.aqua0801.droidlink.shared.protocol.ClipboardText
 import io.github.aqua0801.droidlink.shared.protocol.Message
 import io.github.aqua0801.droidlink.shared.protocol.RejectReason
 import kotlinx.coroutines.Job
@@ -58,7 +60,7 @@ class LinkManager(private val context: Context, private val graph: AppGraph) {
     val session: StateFlow<LinkSession?> = _session.asStateFlow()
 
     private val _events = MutableSharedFlow<String>(extraBufferCapacity = 16)
-    /** One-off user-facing messages (snackbars). */
+    /** One-off user-facing messages (snackbars), already localized. */
     val events: SharedFlow<String> = _events.asSharedFlow()
 
     /** Bumped whenever the target changes, so stale loops can't overwrite the state. */
@@ -117,7 +119,7 @@ class LinkManager(private val context: Context, private val graph: AppGraph) {
                 val fingerprint = info.fingerprint.hex
                 graph.pairedPcs.upsert(PairedPc(fingerprint, session.peerName, info.hosts, info.port, lastHost = host))
                 graph.pairedPcs.autoConnectFingerprint = fingerprint
-                notify("已與 ${session.peerName} 配對")
+                notify(context.getString(R.string.event_paired, session.peerName))
                 synchronized(this) {
                     if (generation.get() != gen) {
                         session.close()
@@ -133,16 +135,16 @@ class LinkManager(private val context: Context, private val graph: AppGraph) {
                 lastError = describe(e.reason)
                 break // the token is the problem; other hosts won't help
             } catch (e: ServerIdentityMismatchException) {
-                lastError = "$host 不是這台電腦"
+                lastError = context.getString(R.string.error_wrong_host, host)
             } catch (e: IOException) {
-                lastError = "$host：${e.message ?: e::class.simpleName}"
+                lastError = hostError(host, e)
             }
         }
         if (generation.get() == gen) {
             _state.value = LinkState.Idle
             LinkService.stop(context)
         }
-        notify("配對失敗：${lastError ?: "無法連線"}")
+        notify(context.getString(R.string.event_pair_failed, lastError ?: context.getString(R.string.error_cannot_connect)))
         return false
     }
 
@@ -174,7 +176,7 @@ class LinkManager(private val context: Context, private val graph: AppGraph) {
                     attempt = 0
                     backoffMs = INITIAL_BACKOFF_MS
                     runSession(gen, fingerprint, result.host, result.session)
-                    lastError = "連線中斷"
+                    lastError = context.getString(R.string.error_connection_lost)
                     delay(500)
                 }
                 is Attempt.Fatal -> {
@@ -221,12 +223,15 @@ class LinkManager(private val context: Context, private val graph: AppGraph) {
             } catch (e: LinkRejectedException) {
                 return Attempt.Fatal(describe(e.reason))
             } catch (e: ServerIdentityMismatchException) {
-                lastError = "$host 不是這台電腦"
+                lastError = context.getString(R.string.error_wrong_host, host)
             } catch (e: IOException) {
-                lastError = "$host：${e.message ?: e::class.simpleName}"
+                lastError = hostError(host, e)
             }
         }
-        return Attempt.Failed(lastError ?: "沒有可用的位址", candidates.map { it.first }.toSet())
+        return Attempt.Failed(
+            lastError ?: context.getString(R.string.error_no_address),
+            candidates.map { it.first }.toSet(),
+        )
     }
 
     private suspend fun runSession(gen: Int, fingerprint: String, host: String, session: LinkSession) {
@@ -242,16 +247,23 @@ class LinkManager(private val context: Context, private val graph: AppGraph) {
         }
     }
 
-    @Suppress("UNUSED_PARAMETER")
     private suspend fun onMessage(message: Message) {
-        // Nothing flows PC → phone yet; clipboard, APK push, etc. will be dispatched here.
+        when (message) {
+            is ClipboardText -> graph.clipboard.applyRemote(message.text)
+            else -> Unit
+        }
     }
 
-    private fun describe(reason: RejectReason): String = when (reason) {
-        RejectReason.NOT_PAIRED -> "電腦已不再信任這支手機，請重新配對"
-        RejectReason.BAD_TOKEN -> "配對碼無效或已過期，請在電腦上重新產生 QR 碼"
-        RejectReason.PROTOCOL_MISMATCH -> "手機與電腦的 DroidLink 版本不相容"
-    }
+    private fun hostError(host: String, e: IOException): String =
+        context.getString(R.string.error_host, host, e.message ?: e::class.simpleName.orEmpty())
+
+    private fun describe(reason: RejectReason): String = context.getString(
+        when (reason) {
+            RejectReason.NOT_PAIRED -> R.string.reject_not_paired
+            RejectReason.BAD_TOKEN -> R.string.reject_bad_token
+            RejectReason.PROTOCOL_MISMATCH -> R.string.reject_protocol
+        },
+    )
 
     private companion object {
         const val INITIAL_BACKOFF_MS = 1_000L

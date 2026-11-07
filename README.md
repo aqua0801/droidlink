@@ -26,9 +26,26 @@ $env:JAVA_HOME = 'C:\@TOOLS\AndroidStudio\jbr'
 
 ## 資料位置
 
-- 電腦：`%APPDATA%\DroidLink\`（`identity.json`、`trusted-devices.json`）
-- 手機：app 私有目錄 `files/identity.json`、SharedPreferences `paired_pcs`
+- 電腦：`%APPDATA%\DroidLink\`（`identity.json`、`trusted-devices.json`、`settings.json`）
+- 手機：app 私有目錄 `files/identity.json`、SharedPreferences `paired_pcs`、`settings`
+
+## 剪貼簿（基本模式）
+
+- 電腦 → 手機：自動。Windows 用 `GetClipboardSequenceNumber` 偵測變更，只有變了才讀內容。
+- 手機 → 電腦：Android 10 起 App 只有在自己的視窗取得焦點時才能讀剪貼簿，所以由使用者主動觸發：
+  選取文字選單「傳到電腦」、分享選單、快速設定磚「傳送剪貼簿」，或打開 DroidLink 時自動送出。
+- 兩端都會記住最後一次同步的內容，避免回傳造成迴圈。
+- 背景雙向即時同步要等 ADB 增強模式（shell 身分可以在背景讀剪貼簿）。
+
+## 多國語系
+
+所有介面字串都在資源檔，目前預設語系是繁體中文：
+
+- Android：`androidApp/src/main/res/values/strings.xml`
+- 電腦：`desktopApp/src/main/composeResources/values/strings.xml`
+
+新增語言時，在對應位置加 `values-en/strings.xml` 等資料夾即可。程式碼裡不寫死任何介面文字。
 
 ## 平台抽象
 
-電腦端與 OS 相關的部分都放在介面後面（目前有 `TrayNotifier`；之後的 `ClipboardMonitor`、`ScreenCapturer` 也一樣），之後補 Linux 實作即可。
+電腦端與 OS 相關的部分都放在介面後面（`TrayNotifier`、`SystemClipboard`；之後的 `ScreenCapturer` 也一樣），之後補 Linux 實作即可。

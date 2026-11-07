@@ -1,11 +1,14 @@
 package io.github.aqua0801.droidlink.desktop
 
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 
 /** Per-user data directory: `%APPDATA%\DroidLink` on Windows, `~/.config/droidlink` elsewhere. */
 class AppPaths(val dir: File) {
     val identityFile = File(dir, "identity.json")
     val trustedFile = File(dir, "trusted-devices.json")
+    val settingsFile = File(dir, "settings.json")
 
     companion object {
         fun default(): AppPaths {
@@ -18,4 +21,12 @@ class AppPaths(val dir: File) {
             return AppPaths(dir)
         }
     }
+}
+
+/** Writes via a temp file + move so a crash never leaves a half-written file. */
+fun File.writeTextAtomically(text: String) {
+    parentFile?.mkdirs()
+    val tmp = File(parentFile, "$name.tmp")
+    tmp.writeText(text)
+    Files.move(tmp.toPath(), toPath(), StandardCopyOption.REPLACE_EXISTING)
 }

@@ -9,8 +9,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 
 @Serializable
 data class TrustedPeer(val fingerprint: String, val name: String, val pairedAt: Long)
@@ -49,9 +47,6 @@ class TrustedPeerStore(private val file: File) : PeerTrust {
             .getOrElse { emptyList() }
 
     private fun save(peers: List<TrustedPeer>) {
-        file.parentFile?.mkdirs()
-        val tmp = File(file.parentFile, "${file.name}.tmp")
-        tmp.writeText(json.encodeToString(serializer, peers))
-        Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        file.writeTextAtomically(json.encodeToString(serializer, peers))
     }
 }

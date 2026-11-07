@@ -2,9 +2,9 @@ package io.github.aqua0801.droidlink.ui
 
 import android.annotation.SuppressLint
 import android.content.Intent
-import android.net.Uri
 import android.os.PowerManager
 import android.provider.Settings
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -24,6 +24,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -36,21 +37,28 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.aqua0801.droidlink.AppGraph
+import io.github.aqua0801.droidlink.R
+import io.github.aqua0801.droidlink.clipboard.ClipEvent
 import io.github.aqua0801.droidlink.data.PairedPc
 import io.github.aqua0801.droidlink.link.LinkState
 import io.github.aqua0801.droidlink.link.fingerprint
 import io.github.aqua0801.droidlink.shared.crypto.Fingerprint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.text.DateFormat
+import java.util.Date
 
 @Composable
-fun MainScreen(graph: AppGraph, onScan: () -> Unit) {
+fun MainScreen(graph: AppGraph, onScan: () -> Unit, onSendClipboard: () -> Unit) {
     val state by graph.link.state.collectAsStateWithLifecycle()
     val pcs by graph.pairedPcs.pcs.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
@@ -70,20 +78,25 @@ fun MainScreen(graph: AppGraph, onScan: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
-                Text("DroidLink", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
             }
             item { StatusCard(state, onDisconnect = graph.link::disconnect) }
             item {
-                Button(onClick = onScan, modifier = Modifier.fillMaxWidth()) { Text("掃描 QR 碼配對電腦") }
+                Button(onClick = onScan, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.action_scan)) }
             }
             item { BatteryOptimizationCard() }
+            item { ClipboardCard(graph, connected = state is LinkState.Connected, onSendNow = onSendClipboard) }
             item {
-                Text("已配對的電腦", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
+                Text(
+                    stringResource(R.string.section_paired),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
             }
             if (pcs.isEmpty()) {
                 item {
                     Text(
-                        "還沒有配對任何電腦。在電腦端按「產生配對 QR 碼」，再用上面的按鈕掃描。",
+                        stringResource(R.string.paired_empty),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -100,7 +113,8 @@ fun MainScreen(graph: AppGraph, onScan: () -> Unit) {
             }
             item {
                 Text(
-                    "本機指紋　${ownFingerprint ?: "產生中…"}",
+                    ownFingerprint?.let { stringResource(R.string.own_fingerprint, it) }
+                        ?: stringResource(R.string.own_fingerprint_pending),
                     style = MaterialTheme.typography.labelSmall,
                     fontFamily = FontFamily.Monospace,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -136,27 +150,73 @@ private fun StatusCard(state: LinkState, onDisconnect: () -> Unit) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 when (state) {
-                    LinkState.Idle -> Text("未連線", style = MaterialTheme.typography.titleMedium)
-                    is LinkState.Pairing -> Text("正在與 ${state.serverName} 配對…", style = MaterialTheme.typography.titleMedium)
+                    LinkState.Idle -> Title(stringResource(R.string.status_idle))
+                    is LinkState.Pairing -> Title(stringResource(R.string.status_pairing, state.serverName))
                     is LinkState.Connecting -> {
-                        Text("正在連線到 ${state.pcName}", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            "第 ${state.attempt} 次嘗試" + (state.lastError?.let { " · $it" } ?: ""),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        Title(stringResource(R.string.status_connecting, state.pcName))
+                        Detail(
+                            state.lastError?.let { stringResource(R.string.status_connecting_attempt_error, state.attempt, it) }
+                                ?: stringResource(R.string.status_connecting_attempt, state.attempt),
                         )
                     }
                     is LinkState.Connected -> {
-                        Text("已連線到 ${state.pcName}", style = MaterialTheme.typography.titleMedium)
-                        Text("經由 ${state.host}", style = MaterialTheme.typography.bodySmall)
+                        Title(stringResource(R.string.status_connected, state.pcName))
+                        Detail(stringResource(R.string.status_connected_via, state.host))
                     }
                 }
             }
             if (state !is LinkState.Idle) {
-                TextButton(onClick = onDisconnect) { Text("中斷") }
+                TextButton(onClick = onDisconnect) { Text(stringResource(R.string.action_disconnect)) }
             }
         }
     }
+}
+
+@Composable
+private fun Title(text: String) = Text(text, style = MaterialTheme.typography.titleMedium)
+
+@Composable
+private fun Detail(text: String) =
+    Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+@Composable
+private fun ClipboardCard(graph: AppGraph, connected: Boolean, onSendNow: () -> Unit) {
+    val autoSend by graph.settings.clipboardAutoSend.collectAsStateWithLifecycle()
+    val receive by graph.settings.clipboardReceive.collectAsStateWithLifecycle()
+    val lastSent by graph.clipboard.lastSent.collectAsStateWithLifecycle()
+    val lastReceived by graph.clipboard.lastReceived.collectAsStateWithLifecycle()
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Title(stringResource(R.string.section_clipboard))
+            SwitchRow(stringResource(R.string.clip_auto_send), autoSend, graph.settings::setClipboardAutoSend)
+            SwitchRow(stringResource(R.string.clip_receive), receive, graph.settings::setClipboardReceive)
+            lastSent?.let { ClipLine(R.string.clip_last_sent, it) }
+            lastReceived?.let { ClipLine(R.string.clip_last_received, it) }
+            OutlinedButton(onClick = onSendNow, enabled = connected) { Text(stringResource(R.string.clip_send_now)) }
+            Detail(stringResource(R.string.clip_hint))
+        }
+    }
+}
+
+@Composable
+private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        Switch(checked = checked, onCheckedChange = onChange)
+    }
+}
+
+@Composable
+private fun ClipLine(@StringRes label: Int, event: ClipEvent) {
+    val time = remember(event.at) { DateFormat.getTimeInstance(DateFormat.MEDIUM).format(Date(event.at)) }
+    val preview = event.text.replace(Regex("\\s+"), " ").trim()
+    Text(
+        stringResource(label, "$time  $preview"),
+        style = MaterialTheme.typography.bodySmall,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
 }
 
 @Composable
@@ -170,15 +230,13 @@ private fun PcCard(pc: PairedPc, active: Boolean, onConnect: () -> Unit, onEditH
                 fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Text(
-                "位址：" + (listOfNotNull(pc.manualHost) + pc.hosts).distinct().joinToString("、"),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Detail(stringResource(R.string.pc_addresses, (listOfNotNull(pc.manualHost) + pc.hosts).distinct().joinToString(", ")))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onConnect, enabled = !active) { Text(if (active) "使用中" else "連線") }
-                OutlinedButton(onClick = onEditHost) { Text("手動位址") }
-                TextButton(onClick = onForget) { Text("移除") }
+                Button(onClick = onConnect, enabled = !active) {
+                    Text(stringResource(if (active) R.string.action_in_use else R.string.action_connect))
+                }
+                OutlinedButton(onClick = onEditHost) { Text(stringResource(R.string.action_manual_host)) }
+                TextButton(onClick = onForget) { Text(stringResource(R.string.action_forget)) }
             }
         }
     }
@@ -189,24 +247,21 @@ private fun ManualHostDialog(pc: PairedPc, onDismiss: () -> Unit, onSave: (Strin
     var text by remember { mutableStateOf(pc.manualHost.orEmpty()) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("手動位址") },
+        title = { Text(stringResource(R.string.manual_host_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    "不在同一個區網時（例如走 Tailscale），輸入電腦的 MagicDNS 名稱或 IP。留空即可清除。",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+                Text(stringResource(R.string.manual_host_message), style = MaterialTheme.typography.bodyMedium)
                 OutlinedTextField(
                     value = text,
                     onValueChange = { text = it },
                     singleLine = true,
-                    placeholder = { Text("my-pc.tail1234.ts.net") },
+                    placeholder = { Text(stringResource(R.string.manual_host_placeholder)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
         },
-        confirmButton = { TextButton(onClick = { onSave(text) }) { Text("儲存") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
+        confirmButton = { TextButton(onClick = { onSave(text) }) { Text(stringResource(R.string.action_save)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }
 
@@ -228,15 +283,12 @@ private fun BatteryOptimizationCard() {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                "系統可能會在背景關閉 DroidLink，讓連線中斷。建議允許它不受電池最佳化限制。",
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            Text(stringResource(R.string.battery_opt_message), style = MaterialTheme.typography.bodyMedium)
             TextButton(onClick = {
                 context.startActivity(
-                    Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${context.packageName}")),
+                    Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, "package:${context.packageName}".toUri()),
                 )
-            }) { Text("允許背景執行") }
+            }) { Text(stringResource(R.string.battery_opt_action)) }
         }
     }
 }

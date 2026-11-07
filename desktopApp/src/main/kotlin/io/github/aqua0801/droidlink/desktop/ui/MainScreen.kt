@@ -18,6 +18,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -33,16 +34,24 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.github.aqua0801.droidlink.desktop.ClipEvent
 import io.github.aqua0801.droidlink.desktop.ConnectedDevice
 import io.github.aqua0801.droidlink.desktop.DesktopController
 import io.github.aqua0801.droidlink.desktop.PairingOffer
 import io.github.aqua0801.droidlink.desktop.ServerStatus
 import io.github.aqua0801.droidlink.desktop.TrustedPeer
+import io.github.aqua0801.droidlink.desktop.resources.*
 import io.github.aqua0801.droidlink.shared.crypto.Fingerprint
 import io.github.aqua0801.droidlink.shared.protocol.BatteryStatus
 import io.github.aqua0801.droidlink.shared.protocol.PowerSource
 import kotlinx.coroutines.delay
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun MainScreen(controller: DesktopController) {
@@ -50,6 +59,9 @@ fun MainScreen(controller: DesktopController) {
     val devices by controller.devices.collectAsState()
     val pairing by controller.pairing.collectAsState()
     val trusted by controller.trustedPeers.peers.collectAsState()
+    val settings by controller.settings.settings.collectAsState()
+    val lastSent by controller.clipboard.lastSent.collectAsState()
+    val lastReceived by controller.clipboard.lastReceived.collectAsState()
 
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
@@ -58,12 +70,24 @@ fun MainScreen(controller: DesktopController) {
         ) {
             Header(controller.serverName, server)
 
-            Section("已連線裝置") {
-                if (devices.isEmpty()) Hint("目前沒有手機連線。")
+            Section(stringResource(Res.string.section_devices)) {
+                if (devices.isEmpty()) Hint(stringResource(Res.string.devices_empty))
                 devices.forEach { DeviceRow(it) }
             }
 
-            Section("配對新裝置") {
+            Section(stringResource(Res.string.section_clipboard)) {
+                SwitchRow(stringResource(Res.string.clipboard_send_to_phone), settings.clipboardSendToPhone) { on ->
+                    controller.settings.update { it.copy(clipboardSendToPhone = on) }
+                }
+                SwitchRow(stringResource(Res.string.clipboard_receive_from_phone), settings.clipboardReceiveFromPhone) { on ->
+                    controller.settings.update { it.copy(clipboardReceiveFromPhone = on) }
+                }
+                lastSent?.let { ClipLine(Res.string.clipboard_last_sent, it) }
+                lastReceived?.let { ClipLine(Res.string.clipboard_last_received, it) }
+                Hint(stringResource(Res.string.clipboard_phone_hint))
+            }
+
+            Section(stringResource(Res.string.section_pairing)) {
                 PairingPanel(
                     offer = pairing,
                     canPair = server is ServerStatus.Running,
@@ -72,8 +96,8 @@ fun MainScreen(controller: DesktopController) {
                 )
             }
 
-            Section("已信任的裝置") {
-                if (trusted.isEmpty()) Hint("尚未配對任何手機。")
+            Section(stringResource(Res.string.section_trusted)) {
+                if (trusted.isEmpty()) Hint(stringResource(Res.string.trusted_empty))
                 trusted.forEach { peer ->
                     TrustedRow(
                         peer = peer,
@@ -84,7 +108,7 @@ fun MainScreen(controller: DesktopController) {
             }
 
             Text(
-                "本機指紋　${controller.identity.fingerprint.display()}",
+                stringResource(Res.string.own_fingerprint, controller.identity.fingerprint.display()),
                 style = MaterialTheme.typography.labelSmall,
                 fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -96,11 +120,14 @@ fun MainScreen(controller: DesktopController) {
 @Composable
 private fun Header(name: String, status: ServerStatus) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text("DroidLink", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
+        Text(stringResource(Res.string.app_name), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
         val (text, color) = when (status) {
-            ServerStatus.Starting -> "啟動中…" to MaterialTheme.colorScheme.onSurfaceVariant
-            is ServerStatus.Running -> "$name · 監聽連接埠 ${status.port}" to MaterialTheme.colorScheme.primary
-            is ServerStatus.Failed -> "伺服器無法啟動：${status.message}" to MaterialTheme.colorScheme.error
+            ServerStatus.Starting ->
+                stringResource(Res.string.server_starting) to MaterialTheme.colorScheme.onSurfaceVariant
+            is ServerStatus.Running ->
+                stringResource(Res.string.server_running, name, status.port.toString()) to MaterialTheme.colorScheme.primary
+            is ServerStatus.Failed ->
+                stringResource(Res.string.server_failed, status.message) to MaterialTheme.colorScheme.error
         }
         Text(text, style = MaterialTheme.typography.bodyMedium, color = color)
     }
@@ -126,6 +153,27 @@ private fun Hint(text: String) {
 }
 
 @Composable
+private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Switch(checked = checked, onCheckedChange = onChange)
+    }
+}
+
+private val clipTimeFormat = DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.systemDefault())
+
+@Composable
+private fun ClipLine(label: StringResource, event: ClipEvent) {
+    val preview = event.text.replace(Regex("\\s+"), " ").trim()
+    Text(
+        stringResource(label, "${clipTimeFormat.format(Instant.ofEpochMilli(event.at))}  $preview"),
+        style = MaterialTheme.typography.bodySmall,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
+}
+
+@Composable
 private fun DeviceRow(device: ConnectedDevice) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -134,7 +182,7 @@ private fun DeviceRow(device: ConnectedDevice) {
         }
         val battery = device.battery
         if (battery == null) {
-            Hint("等待電量資訊…")
+            Hint(stringResource(Res.string.battery_waiting))
         } else {
             val low = battery.level <= 20 && battery.plugged == PowerSource.NONE
             LinearProgressIndicator(
@@ -147,32 +195,35 @@ private fun DeviceRow(device: ConnectedDevice) {
     }
 }
 
-private fun batteryLine(b: BatteryStatus): String = buildString {
-    append("${b.level}%")
-    append(" · ")
-    append(
+@Composable
+private fun batteryLine(b: BatteryStatus): String {
+    val state = stringResource(
         when {
-            b.full -> "已充飽"
-            b.charging -> "充電中"
-            b.plugged != PowerSource.NONE -> "已接電源"
-            else -> "使用電池"
+            b.full -> Res.string.battery_full
+            b.charging -> Res.string.battery_charging
+            b.plugged != PowerSource.NONE -> Res.string.battery_plugged
+            else -> Res.string.battery_discharging
         },
     )
-    when (b.plugged) {
-        PowerSource.AC -> "變壓器"
-        PowerSource.USB -> "USB"
-        PowerSource.WIRELESS -> "無線充電"
-        PowerSource.DOCK -> "底座"
+    val source = when (b.plugged) {
+        PowerSource.AC -> Res.string.power_ac
+        PowerSource.USB -> Res.string.power_usb
+        PowerSource.WIRELESS -> Res.string.power_wireless
+        PowerSource.DOCK -> Res.string.power_dock
         else -> null
-    }?.let { append("（$it）") }
-    b.temperatureC?.let { append(" · %.1f°C".format(it)) }
+    }?.let { stringResource(it) }
+    return buildString {
+        append("${b.level}% · $state")
+        source?.let { append("（$it）") }
+        b.temperatureC?.let { append(" · %.1f°C".format(it)) }
+    }
 }
 
 @Composable
 private fun PairingPanel(offer: PairingOffer?, canPair: Boolean, onStart: () -> Unit, onCancel: () -> Unit) {
     if (offer == null) {
-        Hint("在手機的 DroidLink 點「掃描 QR 碼配對電腦」，再掃描這裡產生的 QR 碼。")
-        Button(onClick = onStart, enabled = canPair) { Text("產生配對 QR 碼") }
+        Hint(stringResource(Res.string.pairing_hint))
+        Button(onClick = onStart, enabled = canPair) { Text(stringResource(Res.string.pairing_generate)) }
         return
     }
 
@@ -188,17 +239,20 @@ private fun PairingPanel(offer: PairingOffer?, canPair: Boolean, onStart: () -> 
     Row(horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically) {
         Image(
             bitmap = offer.qr,
-            contentDescription = "配對 QR 碼",
+            contentDescription = stringResource(Res.string.pairing_qr_description),
             modifier = Modifier.size(240.dp).background(Color.White),
             filterQuality = FilterQuality.None,
         )
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("剩餘 %d:%02d".format(remaining / 60, remaining % 60), style = MaterialTheme.typography.titleMedium)
-            Hint("手機會依序嘗試：")
+            Text(
+                stringResource(Res.string.pairing_remaining, "%d:%02d".format(remaining / 60, remaining % 60)),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Hint(stringResource(Res.string.pairing_hosts))
             offer.info.hosts.forEach {
                 Text(it, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
             }
-            OutlinedButton(onClick = onCancel) { Text("取消") }
+            OutlinedButton(onClick = onCancel) { Text(stringResource(Res.string.action_cancel)) }
         }
     }
 }
@@ -208,7 +262,7 @@ private fun TrustedRow(peer: TrustedPeer, connected: Boolean, onForget: () -> Un
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                if (connected) "${peer.name}　· 已連線" else peer.name,
+                if (connected) stringResource(Res.string.trusted_connected, peer.name) else peer.name,
                 style = MaterialTheme.typography.bodyLarge,
             )
             Text(
@@ -218,6 +272,6 @@ private fun TrustedRow(peer: TrustedPeer, connected: Boolean, onForget: () -> Un
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        TextButton(onClick = onForget) { Text("移除") }
+        TextButton(onClick = onForget) { Text(stringResource(Res.string.action_forget)) }
     }
 }

@@ -12,6 +12,10 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.isTraySupported
 import androidx.compose.ui.window.rememberWindowState
 import io.github.aqua0801.droidlink.desktop.platform.ComposeTrayNotifier
+import io.github.aqua0801.droidlink.desktop.resources.Res
+import io.github.aqua0801.droidlink.desktop.resources.app_name
+import io.github.aqua0801.droidlink.desktop.resources.tray_quit
+import io.github.aqua0801.droidlink.desktop.resources.tray_show
 import io.github.aqua0801.droidlink.desktop.ui.AppIcon
 import io.github.aqua0801.droidlink.desktop.ui.DroidLinkDesktopTheme
 import io.github.aqua0801.droidlink.desktop.ui.MainScreen
@@ -19,6 +23,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import org.jetbrains.compose.resources.stringResource
 
 fun main() {
     val trayState = TrayState()
@@ -34,17 +39,18 @@ fun main() {
             exitApplication()
         }
         val trayAvailable = isTraySupported
+        val appName = stringResource(Res.string.app_name)
 
         if (trayAvailable) {
             Tray(
                 icon = AppIcon,
                 state = trayState,
-                tooltip = "DroidLink",
+                tooltip = appName,
                 onAction = { windowVisible = true },
                 menu = {
-                    Item("顯示 DroidLink", onClick = { windowVisible = true })
+                    Item(stringResource(Res.string.tray_show), onClick = { windowVisible = true })
                     Separator()
-                    Item("結束", onClick = quit)
+                    Item(stringResource(Res.string.tray_quit), onClick = quit)
                 },
             )
         }
@@ -53,9 +59,9 @@ fun main() {
             // With a tray icon, closing the window keeps the server running in the background.
             onCloseRequest = { if (trayAvailable) windowVisible = false else quit() },
             visible = windowVisible,
-            title = "DroidLink",
+            title = appName,
             icon = AppIcon,
-            state = rememberWindowState(width = 560.dp, height = 820.dp),
+            state = rememberWindowState(width = 560.dp, height = 880.dp),
         ) {
             DroidLinkDesktopTheme {
                 MainScreen(controller)

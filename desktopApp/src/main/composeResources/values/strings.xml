@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Default locale (Traditional Chinese for now). Add values-en/strings.xml etc. for other languages. -->
+<resources>
+    <string name="app_name">DroidLink</string>
+    <string name="tray_show">顯示 DroidLink</string>
+    <string name="tray_quit">結束</string>
+
+    <string name="server_starting">啟動中…</string>
+    <string name="server_running">%1$s · 監聽連接埠 %2$s</string>
+    <string name="server_failed">伺服器無法啟動：%1$s</string>
+
+    <string name="section_devices">已連線裝置</string>
+    <string name="devices_empty">目前沒有手機連線。</string>
+
+    <string name="section_pairing">配對新裝置</string>
+    <string name="pairing_hint">在手機的 DroidLink 點「掃描 QR 碼配對電腦」，再掃描這裡產生的 QR 碼。</string>
+    <string name="pairing_generate">產生配對 QR 碼</string>
+    <string name="pairing_qr_description">配對 QR 碼</string>
+    <string name="pairing_remaining">剩餘 %1$s</string>
+    <string name="pairing_hosts">手機會依序嘗試：</string>
+
+    <string name="section_trusted">已信任的裝置</string>
+    <string name="trusted_empty">尚未配對任何手機。</string>
+    <string name="trusted_connected">%1$s　· 已連線</string>
+
+    <string name="section_clipboard">剪貼簿</string>
+    <string name="clipboard_send_to_phone">自動把電腦的剪貼簿同步到手機</string>
+    <string name="clipboard_receive_from_phone">接收手機傳來的剪貼簿</string>
+    <string name="clipboard_last_sent">最近傳送：%1$s</string>
+    <string name="clipboard_last_received">最近接收：%1$s</string>
+    <string name="clipboard_phone_hint">Android 不允許 App 在背景讀取剪貼簿，所以手機端要主動送出：選取文字後選「傳到電腦」、用分享選單，或使用快速設定的「傳送剪貼簿」。</string>
+
+    <string name="own_fingerprint">本機指紋　%1$s</string>
+    <string name="action_cancel">取消</string>
+    <string name="action_forget">移除</string>
+
+    <string name="battery_waiting">等待電量資訊…</string>
+    <string name="battery_full">已充飽</string>
+    <string name="battery_charging">充電中</string>
+    <string name="battery_plugged">已接電源</string>
+    <string name="battery_discharging">使用電池</string>
+    <string name="power_ac">變壓器</string>
+    <string name="power_usb">USB</string>
+    <string name="power_wireless">無線充電</string>
+    <string name="power_dock">底座</string>
+
+    <string name="notify_paired_title">配對完成</string>
+    <string name="notify_paired_body">%1$s 已與這台電腦配對</string>
+    <string name="notify_full_title">%1$s 已充飽</string>
+    <string name="notify_full_body">電量 %1$s，可以拔掉充電器了</string>
+    <string name="notify_low_title">%1$s 電量偏低</string>
+    <string name="notify_low_body">剩下 %1$s</string>
+    <string name="notify_critical_title">%1$s 電量極低</string>
+    <string name="notify_critical_body">只剩 %1$s，請盡快充電</string>
+</resources>

@@ -68,6 +68,12 @@ class PeerNotTrustedException(val fingerprint: Fingerprint) :
 fun Throwable.findPeerNotTrusted(): PeerNotTrustedException? =
     generateSequence(this) { it.cause }.filterIsInstance<PeerNotTrustedException>().firstOrNull()
 
+/**
+ * Trust is decided solely by [accept] on the leaf fingerprint. The server passes an
+ * accept-all predicate on purpose and authorizes the fingerprint after the handshake
+ * (see [io.github.aqua0801.droidlink.shared.link.LinkServer]); clients always pin.
+ */
+@Suppress("TrustAllX509TrustManager") // Android lint can't see through the predicate.
 class PinnedTrustManager(private val accept: (Fingerprint) -> Boolean) : X509ExtendedTrustManager() {
     private fun verify(chain: Array<out X509Certificate>?) {
         val leaf = chain?.firstOrNull() ?: throw CertificateException("peer presented no certificate")

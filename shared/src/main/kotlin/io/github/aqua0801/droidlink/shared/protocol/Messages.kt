@@ -75,3 +75,8 @@ data class BatteryStatus(
 
 @Serializable
 enum class PowerSource { NONE, AC, USB, WIRELESS, DOCK, UNKNOWN }
+
+/** Plain-text clipboard content, sent in either direction. */
+@Serializable
+@SerialName("clip")
+data class ClipboardText(val text: String) : Message()

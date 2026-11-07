@@ -3,7 +3,17 @@ package io.github.aqua0801.droidlink.desktop
 import androidx.compose.ui.graphics.ImageBitmap
 import io.github.aqua0801.droidlink.desktop.net.MdnsAdvertiser
 import io.github.aqua0801.droidlink.desktop.net.NetworkInfo
+import io.github.aqua0801.droidlink.desktop.platform.SystemClipboard
 import io.github.aqua0801.droidlink.desktop.platform.TrayNotifier
+import io.github.aqua0801.droidlink.desktop.resources.Res
+import io.github.aqua0801.droidlink.desktop.resources.notify_critical_body
+import io.github.aqua0801.droidlink.desktop.resources.notify_critical_title
+import io.github.aqua0801.droidlink.desktop.resources.notify_full_body
+import io.github.aqua0801.droidlink.desktop.resources.notify_full_title
+import io.github.aqua0801.droidlink.desktop.resources.notify_low_body
+import io.github.aqua0801.droidlink.desktop.resources.notify_low_title
+import io.github.aqua0801.droidlink.desktop.resources.notify_paired_body
+import io.github.aqua0801.droidlink.desktop.resources.notify_paired_title
 import io.github.aqua0801.droidlink.shared.crypto.Fingerprint
 import io.github.aqua0801.droidlink.shared.crypto.Identity
 import io.github.aqua0801.droidlink.shared.crypto.IdentityFile
@@ -13,6 +23,7 @@ import io.github.aqua0801.droidlink.shared.link.MessageHandler
 import io.github.aqua0801.droidlink.shared.pairing.PairingInfo
 import io.github.aqua0801.droidlink.shared.pairing.PairingTokens
 import io.github.aqua0801.droidlink.shared.protocol.BatteryStatus
+import io.github.aqua0801.droidlink.shared.protocol.ClipboardText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -22,6 +33,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.getString
+import java.io.IOException
 import java.net.InetAddress
 import java.util.concurrent.ConcurrentHashMap
 
@@ -51,10 +64,13 @@ class DesktopController(
     val serverName: String = hostName()
     val identity: Identity = IdentityFile.loadOrCreate(paths.identityFile, "DroidLink PC $serverName")
     val trustedPeers = TrustedPeerStore(paths.trustedFile)
+    val settings = SettingsStore(paths.settingsFile)
 
     private val tokens = PairingTokens()
     private val sessions = ConcurrentHashMap<Fingerprint, LinkSession>()
     private val batteryAlerts = ConcurrentHashMap<Fingerprint, BatteryAlertPolicy>()
+
+    val clipboard = ClipboardSync(SystemClipboard.create(), scope, ::broadcastClipboard)
 
     private val _serverStatus = MutableStateFlow<ServerStatus>(ServerStatus.Starting)
     val serverStatus: StateFlow<ServerStatus> = _serverStatus.asStateFlow()
@@ -70,6 +86,7 @@ class DesktopController(
     private var pairingExpiry: Job? = null
 
     fun start() {
+        clipboard.start()
         scope.launch(Dispatchers.IO) {
             try {
                 val linkServer = LinkServer(
@@ -92,6 +109,7 @@ class DesktopController(
 
     fun stop() {
         cancelPairing()
+        clipboard.stop()
         sessions.values.forEach { it.close() }
         server?.stop()
         // JmDNS sends goodbye packets on close, which can take a few seconds; don't hang the exit on it.
@@ -139,7 +157,9 @@ class DesktopController(
         }
         if (session.newlyPaired) {
             cancelPairing()
-            notifier.notify("配對完成", "${session.peerName} 已與這台電腦配對")
+            scope.launch {
+                notifier.notify(getString(Res.string.notify_paired_title), getString(Res.string.notify_paired_body, session.peerName))
+            }
         }
         scope.launch {
             session.awaitClosed()
@@ -150,23 +170,38 @@ class DesktopController(
         return { message ->
             when (message) {
                 is BatteryStatus -> onBattery(fingerprint, session.peerName, message)
+                is ClipboardText -> if (settings.settings.value.clipboardReceiveFromPhone) clipboard.applyRemote(message.text)
                 else -> Unit
             }
         }
     }
 
-    private fun onBattery(fingerprint: Fingerprint, name: String, status: BatteryStatus) {
+    /** Sends PC clipboard text to every connected phone. Returns true if at least one got it. */
+    private suspend fun broadcastClipboard(text: String): Boolean {
+        if (!settings.settings.value.clipboardSendToPhone) return false
+        var delivered = false
+        for (session in sessions.values) {
+            try {
+                session.send(ClipboardText(text))
+                delivered = true
+            } catch (_: IOException) {
+                // that session is going away; the others still get it
+            }
+        }
+        return delivered
+    }
+
+    private suspend fun onBattery(fingerprint: Fingerprint, name: String, status: BatteryStatus) {
         _devices.update { list -> list.map { if (it.fingerprint == fingerprint) it.copy(battery = status) else it } }
         val policy = batteryAlerts.getOrPut(fingerprint) { BatteryAlertPolicy() }
+        val level = "${status.level}%"
         for (alert in policy.evaluate(status)) {
-            when (alert) {
-                BatteryAlertPolicy.Alert.FULL ->
-                    notifier.notify("$name 已充飽", "電量 ${status.level}%，可以拔掉充電器了")
-                BatteryAlertPolicy.Alert.LOW ->
-                    notifier.notify("$name 電量偏低", "剩下 ${status.level}%")
-                BatteryAlertPolicy.Alert.CRITICAL ->
-                    notifier.notify("$name 電量極低", "只剩 ${status.level}%，請盡快充電")
+            val (title, body) = when (alert) {
+                BatteryAlertPolicy.Alert.FULL -> Res.string.notify_full_title to Res.string.notify_full_body
+                BatteryAlertPolicy.Alert.LOW -> Res.string.notify_low_title to Res.string.notify_low_body
+                BatteryAlertPolicy.Alert.CRITICAL -> Res.string.notify_critical_title to Res.string.notify_critical_body
             }
+            notifier.notify(getString(title, name), getString(body, level))
         }
     }
 

@@ -14,4 +14,7 @@ object DroidLinkDefaults {
     const val SESSION_READ_TIMEOUT_MS = 45_000
     const val PING_INTERVAL_MS = 15_000L
     const val PAIRING_TOKEN_TTL_MS = 5 * 60_000L
+
+    /** Larger clipboard texts are not synced (UTF-16 chars; keeps frames well under the limit). */
+    const val CLIPBOARD_MAX_CHARS = 1_000_000
 }

@@ -2,8 +2,10 @@ package io.github.aqua0801.droidlink
 
 import android.app.Application
 import android.content.Context
+import io.github.aqua0801.droidlink.clipboard.ClipboardBridge
 import io.github.aqua0801.droidlink.data.DeviceInfo
 import io.github.aqua0801.droidlink.data.PairedPcStore
+import io.github.aqua0801.droidlink.data.PhoneSettings
 import io.github.aqua0801.droidlink.link.LinkManager
 import io.github.aqua0801.droidlink.link.NsdDiscovery
 import io.github.aqua0801.droidlink.shared.crypto.Identity
@@ -33,9 +35,11 @@ class AppGraph(app: Application) {
         IdentityFile.loadOrCreate(File(app.filesDir, "identity.json"), "DroidLink Android $deviceName")
     }
 
+    val settings = PhoneSettings(app)
     val pairedPcs = PairedPcStore(app)
     val nsd = NsdDiscovery(app)
     val link = LinkManager(app, this)
+    val clipboard = ClipboardBridge(app, this)
 }
 
 val Context.graph: AppGraph get() = (applicationContext as DroidLinkApp).graph

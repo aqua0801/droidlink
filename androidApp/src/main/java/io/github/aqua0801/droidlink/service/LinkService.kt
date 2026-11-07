@@ -14,6 +14,7 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
+import io.github.aqua0801.droidlink.R
 import io.github.aqua0801.droidlink.battery.toBatteryStatus
 import io.github.aqua0801.droidlink.graph
 import io.github.aqua0801.droidlink.link.LinkState
@@ -45,7 +46,7 @@ class LinkService : LifecycleService() {
         ServiceCompat.startForeground(
             this,
             NOTIFICATION_ID,
-            buildNotification("準備中…"),
+            buildNotification(getString(R.string.notif_preparing)),
             ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE,
         )
 
@@ -95,14 +96,14 @@ class LinkService : LifecycleService() {
     }
 
     private fun describe(state: LinkState): String = when (state) {
-        LinkState.Idle -> "未連線"
-        is LinkState.Pairing -> "正在與 ${state.serverName} 配對…"
-        is LinkState.Connecting -> "正在連線到 ${state.pcName}…"
-        is LinkState.Connected -> "已連線到 ${state.pcName}"
+        LinkState.Idle -> getString(R.string.status_idle)
+        is LinkState.Pairing -> getString(R.string.status_pairing, state.serverName)
+        is LinkState.Connecting -> getString(R.string.status_connecting, state.pcName)
+        is LinkState.Connected -> getString(R.string.status_connected, state.pcName)
     }
 
     private fun createChannel() {
-        val channel = NotificationChannel(CHANNEL_ID, "連線狀態", NotificationManager.IMPORTANCE_LOW)
+        val channel = NotificationChannel(CHANNEL_ID, getString(R.string.notif_channel_link), NotificationManager.IMPORTANCE_LOW)
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
@@ -115,7 +116,7 @@ class LinkService : LifecycleService() {
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_notify_sync)
-            .setContentTitle("DroidLink")
+            .setContentTitle(getString(R.string.app_name))
             .setContentText(text)
             .setContentIntent(openApp)
             .setOngoing(true)

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Default locale (Traditional Chinese for now). Add values-en/strings.xml etc. for other languages. -->
+<resources>
+    <string name="app_name" translatable="false">DroidLink</string>
+    <string name="send_to_pc">傳到電腦</string>
+    <string name="tile_label">傳送剪貼簿</string>
+
+    <!-- Connection status -->
+    <string name="status_idle">未連線</string>
+    <string name="status_pairing">正在與 %1$s 配對…</string>
+    <string name="status_connecting">正在連線到 %1$s</string>
+    <string name="status_connecting_attempt">第 %1$d 次嘗試</string>
+    <string name="status_connecting_attempt_error">第 %1$d 次嘗試 · %2$s</string>
+    <string name="status_connected">已連線到 %1$s</string>
+    <string name="status_connected_via">經由 %1$s</string>
+    <string name="action_disconnect">中斷</string>
+
+    <!-- Pairing -->
+    <string name="action_scan">掃描 QR 碼配對電腦</string>
+    <string name="scan_prompt">掃描電腦端 DroidLink 顯示的 QR 碼</string>
+    <string name="event_not_pairing_qr">這不是 DroidLink 的配對 QR 碼</string>
+    <string name="event_paired">已與 %1$s 配對</string>
+    <string name="event_pair_failed">配對失敗：%1$s</string>
+
+    <!-- Paired PCs -->
+    <string name="section_paired">已配對的電腦</string>
+    <string name="paired_empty">還沒有配對任何電腦。在電腦端按「產生配對 QR 碼」，再用上面的按鈕掃描。</string>
+    <string name="pc_addresses">位址：%1$s</string>
+    <string name="action_connect">連線</string>
+    <string name="action_in_use">使用中</string>
+    <string name="action_manual_host">手動位址</string>
+    <string name="action_forget">移除</string>
+    <string name="manual_host_title">手動位址</string>
+    <string name="manual_host_message">不在同一個區網時（例如走 Tailscale），輸入電腦的 MagicDNS 名稱或 IP。留空即可清除。</string>
+    <string name="manual_host_placeholder" translatable="false">my-pc.tail1234.ts.net</string>
+    <string name="action_save">儲存</string>
+    <string name="action_cancel">取消</string>
+    <string name="own_fingerprint">本機指紋　%1$s</string>
+    <string name="own_fingerprint_pending">本機指紋　產生中…</string>
+
+    <!-- Connection errors -->
+    <string name="error_cannot_connect">無法連線</string>
+    <string name="error_no_address">沒有可用的位址</string>
+    <string name="error_wrong_host">%1$s 不是這台電腦</string>
+    <string name="error_host">%1$s：%2$s</string>
+    <string name="error_connection_lost">連線中斷</string>
+    <string name="reject_not_paired">電腦已不再信任這支手機，請重新配對</string>
+    <string name="reject_bad_token">配對碼無效或已過期，請在電腦上重新產生 QR 碼</string>
+    <string name="reject_protocol">手機與電腦的 DroidLink 版本不相容</string>
+
+    <!-- Clipboard -->
+    <string name="section_clipboard">剪貼簿</string>
+    <string name="clip_auto_send">開啟 DroidLink 時自動傳送剪貼簿</string>
+    <string name="clip_receive">接收電腦傳來的剪貼簿</string>
+    <string name="clip_send_now">立即傳送剪貼簿</string>
+    <string name="clip_hint">在其他 App 選取文字後，可從選單選「傳到電腦」，也可以用分享選單。把快速設定的「傳送剪貼簿」加到通知欄，就能一鍵送出目前的剪貼簿。</string>
+    <string name="clip_sent">已把剪貼簿傳到電腦</string>
+    <string name="clip_not_connected">尚未連線到電腦</string>
+    <string name="clip_empty">剪貼簿沒有文字</string>
+    <string name="clip_too_large">文字太長，無法傳送</string>
+    <string name="clip_failed">傳送失敗</string>
+    <string name="clip_last_sent">最近傳送：%1$s</string>
+    <string name="clip_last_received">最近接收：%1$s</string>
+
+    <!-- Background / service -->
+    <string name="battery_opt_message">系統可能會在背景關閉 DroidLink，讓連線中斷。建議允許它不受電池最佳化限制。</string>
+    <string name="battery_opt_action">允許背景執行</string>
+    <string name="notif_channel_link">連線狀態</string>
+    <string name="notif_preparing">準備中…</string>
+</resources>
