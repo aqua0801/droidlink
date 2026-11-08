@@ -87,6 +87,8 @@ fun MainScreen(controller: DesktopController) {
                 Hint(stringResource(Res.string.clipboard_phone_hint))
             }
 
+            EnhancedSection(controller)
+
             Section(stringResource(Res.string.section_pairing)) {
                 PairingPanel(
                     offer = pairing,
@@ -134,7 +136,7 @@ private fun Header(name: String, status: ServerStatus) {
 }
 
 @Composable
-private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {
+internal fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(title, style = MaterialTheme.typography.titleMedium)
         Card(modifier = Modifier.fillMaxWidth()) {
@@ -148,7 +150,7 @@ private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) 
 }
 
 @Composable
-private fun Hint(text: String) {
+internal fun Hint(text: String) {
     Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 

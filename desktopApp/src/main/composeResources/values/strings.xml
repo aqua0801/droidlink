@@ -52,4 +52,28 @@
     <string name="notify_low_body">剩下 %1$s</string>
     <string name="notify_critical_title">%1$s 電量極低</string>
     <string name="notify_critical_body">只剩 %1$s，請盡快充電</string>
+
+    <string name="section_enhanced">ADB 增強模式</string>
+    <string name="enhanced_intro">透過 ADB 在手機上以 shell 身分執行輔助程式，解鎖背景即時剪貼簿、靜默安裝 APK、完整系統紀錄。需要先在手機開啟 USB 或無線偵錯並授權這台電腦。</string>
+    <string name="enhanced_adb_missing">找不到 adb。請確認 Android SDK platform-tools 已安裝，或把 adb 加入 PATH。</string>
+    <string name="enhanced_no_devices">沒有偵測到裝置。請用 USB 連接，或先 adb connect 無線偵錯的位址。</string>
+    <string name="enhanced_device_unauthorized">%1$s（等待手機上授權）</string>
+    <string name="enhanced_device_offline">%1$s（離線）</string>
+    <string name="enhanced_start">啟動</string>
+    <string name="enhanced_stop">停止</string>
+    <string name="enhanced_state_off">未啟動</string>
+    <string name="enhanced_state_starting">正在啟動輔助程式…</string>
+    <string name="enhanced_state_connected">已連線　%1$s · Android %2$s · SDK %3$s</string>
+    <string name="enhanced_state_failed">啟動失敗：%1$s</string>
+
+    <string name="logcat_title">系統紀錄（logcat）</string>
+    <string name="logcat_filter_hint">篩選參數，例如 *:E 或 -s MyTag:D</string>
+    <string name="logcat_start">開始</string>
+    <string name="logcat_stop">停止</string>
+    <string name="logcat_clear">清除</string>
+    <string name="logcat_empty">尚無紀錄。按「開始」串流 logcat。</string>
+
+    <string name="install_title">安裝 APK</string>
+    <string name="install_choose">選擇 APK 檔案…</string>
+    <string name="install_dialog_title">選擇要安裝到手機的 APK</string>
 </resources>

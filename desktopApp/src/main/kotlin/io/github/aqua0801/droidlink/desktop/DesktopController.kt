@@ -1,6 +1,7 @@
 package io.github.aqua0801.droidlink.desktop
 
 import androidx.compose.ui.graphics.ImageBitmap
+import io.github.aqua0801.droidlink.desktop.adb.AgentController
 import io.github.aqua0801.droidlink.desktop.net.MdnsAdvertiser
 import io.github.aqua0801.droidlink.desktop.net.NetworkInfo
 import io.github.aqua0801.droidlink.desktop.platform.SystemClipboard
@@ -72,6 +73,9 @@ class DesktopController(
 
     val clipboard = ClipboardSync(SystemClipboard.create(), scope, ::broadcastClipboard)
 
+    /** Enhanced mode (ADB). Independent of the P2P link above. */
+    val agent = AgentController(scope)
+
     private val _serverStatus = MutableStateFlow<ServerStatus>(ServerStatus.Starting)
     val serverStatus: StateFlow<ServerStatus> = _serverStatus.asStateFlow()
 
@@ -87,6 +91,7 @@ class DesktopController(
 
     fun start() {
         clipboard.start()
+        agent.startScanning()
         scope.launch(Dispatchers.IO) {
             try {
                 val linkServer = LinkServer(
@@ -110,6 +115,7 @@ class DesktopController(
     fun stop() {
         cancelPairing()
         clipboard.stop()
+        agent.shutdown()
         sessions.values.forEach { it.close() }
         server?.stop()
         // JmDNS sends goodbye packets on close, which can take a few seconds; don't hang the exit on it.

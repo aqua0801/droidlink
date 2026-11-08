@@ -1,3 +1,4 @@
+import org.gradle.language.jvm.tasks.ProcessResources
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
@@ -34,6 +35,15 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+// Bundle the phone-side helper (DEX jar from the :agent module) as a resource. At runtime it is
+// extracted and pushed to the device over ADB. See ARCHITECTURE.md for how the two modes relate.
+tasks.named<ProcessResources>("processResources") {
+    dependsOn(":agent:dexAgent")
+    from(project(":agent").layout.buildDirectory.dir("agent-dex")) {
+        include("droidlink-agent.jar")
+    }
 }
 
 // UI strings: src/main/composeResources/values*/strings.xml (`values` is zh-TW for now).
