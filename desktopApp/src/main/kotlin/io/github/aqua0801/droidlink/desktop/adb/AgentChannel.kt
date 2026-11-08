@@ -18,6 +18,7 @@ internal object AgentFrame {
     const val EVENT: Byte = 4 // agent -> desktop: "<kind>\t<detail>"
     const val APK_DATA: Byte = 5 // desktop -> agent: a chunk of APK bytes
     const val APK_END: Byte = 6 // desktop -> agent: marks the end of the APK
+    const val CLIP: Byte = 7 // both directions: clipboard text (UTF-8)
 }
 
 /** One connected helper socket. A single thread reads; sends are serialized. */

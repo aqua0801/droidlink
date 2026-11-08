@@ -11,8 +11,8 @@ import java.net.Socket
 /**
  * Helper launched on the phone through ADB via app_process, so it runs as the shell user.
  * It listens on a loopback TCP port (the desktop reaches it through `adb forward`) and
- * speaks the small framed protocol in [FrameType]: it streams the system log and installs
- * an APK the desktop sends.
+ * speaks the small framed protocol in [FrameType]: it streams the system log, installs an
+ * APK the desktop sends, and mirrors the clipboard in both directions.
  *
  * It is intentionally self-contained — it shares no code with the app's encrypted P2P
  * channel. The transport here is the ADB connection the user has already authorized. The
@@ -36,6 +36,7 @@ private class AgentSession(private val socket: Socket) {
     private val reader = FrameReader(socket.inputStream)
     private val writer = FrameWriter(socket.outputStream)
     private val logcat = LogcatReader { line -> runCatching { writer.writeText(FrameType.LOG, line) } }
+    private val clipboard = ClipboardBridge { text -> runCatching { writer.writeText(FrameType.CLIP, text) } }
 
     private var apkFile: File? = null
     private var apkOut: FileOutputStream? = null
@@ -49,6 +50,7 @@ private class AgentSession(private val socket: Socket) {
                     FrameType.CMD -> if (!onCommand(String(payload, Charsets.UTF_8))) break
                     FrameType.APK_DATA -> apkStream().write(payload)
                     FrameType.APK_END -> finishApk()
+                    FrameType.CLIP -> clipboard.apply(String(payload, Charsets.UTF_8))
                     else -> Unit
                 }
             }
@@ -56,6 +58,7 @@ private class AgentSession(private val socket: Socket) {
             // socket closed or a malformed frame; fall through to cleanup
         } finally {
             logcat.stop()
+            clipboard.stop()
             runCatching { apkOut?.close() }
             apkFile?.delete()
             runCatching { socket.close() }
@@ -68,6 +71,8 @@ private class AgentSession(private val socket: Socket) {
         when (parts.firstOrNull()) {
             "logcat.start" -> logcat.start(parts.drop(1).filter { it.isNotEmpty() })
             "logcat.stop" -> logcat.stop()
+            "clip.start" -> if (!clipboard.start()) runCatching { writer.writeText(FrameType.EVENT, "clip\tunavailable") }
+            "clip.stop" -> clipboard.stop()
             "shutdown" -> return false
         }
         return true

@@ -106,6 +106,10 @@ fun EnhancedSection(controller: DesktopController) {
         if (state is AgentState.Connected) {
             LogcatPanel(controller)
             InstallPanel(controller)
+
+            var lastEvent by remember { mutableStateOf<String?>(null) }
+            LaunchedEffect(Unit) { agent.events.collect { lastEvent = it } }
+            lastEvent?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
     }
 }

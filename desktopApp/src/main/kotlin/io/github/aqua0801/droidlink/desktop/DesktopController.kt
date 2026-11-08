@@ -92,6 +92,12 @@ class DesktopController(
     fun start() {
         clipboard.start()
         agent.startScanning()
+        // Clipboard the phone reports through enhanced mode is applied the same way as P2P text.
+        scope.launch {
+            agent.clipboardIn.collect { text ->
+                if (settings.settings.value.clipboardReceiveFromPhone) clipboard.applyRemote(text)
+            }
+        }
         scope.launch(Dispatchers.IO) {
             try {
                 val linkServer = LinkServer(
@@ -182,7 +188,7 @@ class DesktopController(
         }
     }
 
-    /** Sends PC clipboard text to every connected phone. Returns true if at least one got it. */
+    /** Sends PC clipboard text to every connected phone (P2P link and enhanced mode). */
     private suspend fun broadcastClipboard(text: String): Boolean {
         if (!settings.settings.value.clipboardSendToPhone) return false
         var delivered = false
@@ -194,6 +200,8 @@ class DesktopController(
                 // that session is going away; the others still get it
             }
         }
+        // Enhanced mode delivers to the phone in the background, independent of the P2P link.
+        if (agent.sendClipboard(text)) delivered = true
         return delivered
     }
 

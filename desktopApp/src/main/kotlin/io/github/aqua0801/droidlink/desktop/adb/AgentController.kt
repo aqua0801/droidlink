@@ -56,6 +56,13 @@ class AgentController(private val scope: CoroutineScope) {
     private val _events = MutableSharedFlow<String>(extraBufferCapacity = 16)
     val events: SharedFlow<String> = _events.asSharedFlow()
 
+    /** Clipboard text reported by the connected phone (background sync). */
+    private val _clipboardIn = MutableSharedFlow<String>(extraBufferCapacity = 8)
+    val clipboardIn: SharedFlow<String> = _clipboardIn.asSharedFlow()
+
+    @Volatile
+    private var lastClip: String? = null
+
     val adbAvailable: Boolean get() = Adb.executable != null
 
     private class Launched(val serial: String, val process: Process, val pcPort: Int, val channel: AgentChannel)
@@ -126,6 +133,15 @@ class AgentController(private val scope: CoroutineScope) {
 
     fun clearLogcat() {
         _logcatLines.value = emptyList()
+    }
+
+    /** Sends PC clipboard text to the connected phone. Returns true if a helper is connected. */
+    fun sendClipboard(text: String): Boolean {
+        val channel = current?.channel ?: return false
+        if (text == lastClip) return true
+        lastClip = text
+        scope.launch(Dispatchers.IO) { runCatching { channel.sendText(AgentFrame.CLIP, text) } }
+        return true
     }
 
     fun installApk(file: File) {
@@ -262,12 +278,22 @@ class AgentController(private val scope: CoroutineScope) {
             release = parts.getOrElse(1) { "" },
             sdk = parts.getOrElse(2) { "" },
         )
+        // Begin background clipboard sync; the desktop decides whether to apply/forward it.
+        current?.channel?.let { channel ->
+            scope.launch(Dispatchers.IO) { runCatching { channel.sendText(AgentFrame.CMD, "clip.start") } }
+        }
     }
 
     private fun onFrame(payload: String, type: Byte) {
         when (type) {
             AgentFrame.LOG -> _logcatLines.update { (it + payload).takeLast(MAX_LOG_LINES) }
             AgentFrame.EVENT -> _events.tryEmit(payload.replace('\t', ' '))
+            AgentFrame.CLIP -> {
+                if (payload != lastClip) {
+                    lastClip = payload
+                    _clipboardIn.tryEmit(payload)
+                }
+            }
         }
     }
 
