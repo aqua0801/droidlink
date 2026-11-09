@@ -53,13 +53,38 @@ compose.resources {
     generateResClass = always
 }
 
+// Packaging needs a full JDK with jpackage (Android Studio's JBR doesn't ship it). Gradle
+// provisions Temurin 21 through the foojay resolver for packaging only; `run` is unaffected.
+val packagingJdk = javaToolchains.launcherFor {
+    languageVersion.set(JavaLanguageVersion.of(21))
+    vendor.set(JvmVendorSpec.ADOPTIUM)
+}
+
 compose.desktop {
     application {
         mainClass = "io.github.aqua0801.droidlink.desktop.MainKt"
+        javaHome = packagingJdk.get().metadata.installationPath.asFile.absolutePath
+
         nativeDistributions {
-            targetFormats(TargetFormat.Msi, TargetFormat.Deb)
+            targetFormats(TargetFormat.Msi, TargetFormat.Exe, TargetFormat.Deb)
             packageName = "DroidLink"
-            packageVersion = "0.1.0"
+            packageVersion = "1.0.0"
+            description = "Phone-to-PC developer companion"
+            vendor = "aqua0801"
+
+            // jlink keeps only these JDK modules in the bundled runtime; a missing one only fails
+            // at runtime in the packaged app. Start from `gradlew :desktopApp:suggestRuntimeModules`,
+            // plus jdk.crypto.ec: the EC keys used for TLS are loaded by name, which that scan misses.
+            modules("java.instrument", "java.naming", "java.sql", "jdk.unsupported", "jdk.crypto.ec")
+
+            windows {
+                menuGroup = "DroidLink"
+                shortcut = true
+                dirChooser = true
+                perUserInstall = true
+                // Fixed so a newer installer upgrades the existing install instead of adding a second one.
+                upgradeUuid = "6b3f2d0e-8c1a-4e5b-9f7d-2a4c6e8b1d30"
+            }
         }
     }
 }
