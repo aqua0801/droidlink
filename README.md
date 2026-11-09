@@ -35,7 +35,21 @@ $env:JAVA_HOME = 'C:\@TOOLS\AndroidStudio\jbr'
 - 手機 → 電腦：Android 10 起 App 只有在自己的視窗取得焦點時才能讀剪貼簿，所以由使用者主動觸發：
   選取文字選單「傳到電腦」、分享選單、快速設定磚「傳送剪貼簿」，或打開 DroidLink 時自動送出。
 - 兩端都會記住最後一次同步的內容，避免回傳造成迴圈。
-- 背景雙向即時同步要等 ADB 增強模式（shell 身分可以在背景讀剪貼簿）。
+- 背景雙向即時同步由 ADB 增強模式提供（見 `ARCHITECTURE.md`）。
+
+## 檔案傳輸
+
+走基本模式的加密 P2P 連線，兩端共用 `shared/transfer` 的傳輸引擎。
+
+- 流程：`file.offer` → `file.accept` / `file.reject` → `FILE_CHUNK` 二進位框（64 KB）→
+  `file.complete`（SHA-256）→ `file.result`。任一端可 `file.cancel`。控制訊息會穿插在資料框之間。
+- 接收端邊寫邊算 SHA-256，不符就刪除；取消或斷線也會刪掉未完成的檔案。已配對裝置自動接收。
+- 對方給的檔名一律只取最後一段並過濾非法字元與保留名稱（`FileNames.sanitize`）。
+- 電腦：存到 `<家目錄>\Downloads\DroidLink\`，先寫 `.part`，驗證後才改名；同名加 `(1)`，不會覆蓋。
+  傳送：拖曳檔案到視窗（只有一支手機連線時），或按裝置旁的「傳送檔案」。
+- 手機：用 MediaStore 存到「下載/DroidLink」（不需儲存權限），完成前為 pending。
+  傳送：分享選單「傳送檔案到電腦」或 App 內「選擇檔案傳到電腦」。分享進來的 URI 權限只在接收的
+  Activity 存活時有效，所以串流會先開好再等電腦接受。
 
 ## 多國語系
 

@@ -239,7 +239,10 @@ class LinkManager(private val context: Context, private val graph: AppGraph) {
             graph.pairedPcs.update(fingerprint) { it.copy(lastHost = host, name = session.peerName) }
             _session.value = session
             setState(gen, LinkState.Connected(fingerprint, session.peerName, host))
-            session.start(::onMessage)
+            graph.files.engine.attach(session)
+            session.start { message ->
+                if (!graph.files.engine.onMessage(session, message)) onMessage(message)
+            }
             session.awaitClosed()
         } finally {
             session.close()

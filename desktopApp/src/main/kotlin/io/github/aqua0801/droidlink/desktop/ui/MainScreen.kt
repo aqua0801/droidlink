@@ -3,6 +3,7 @@ package io.github.aqua0801.droidlink.desktop.ui
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -26,6 +27,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -49,6 +51,7 @@ import io.github.aqua0801.droidlink.shared.protocol.PowerSource
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
+import java.io.File
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -63,59 +66,68 @@ fun MainScreen(controller: DesktopController) {
     val lastSent by controller.clipboard.lastSent.collectAsState()
     val lastReceived by controller.clipboard.lastReceived.collectAsState()
 
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-        ) {
-            Header(controller.serverName, server)
+    var dropHover by remember { mutableStateOf(false) }
 
-            Section(stringResource(Res.string.section_devices)) {
-                if (devices.isEmpty()) Hint(stringResource(Res.string.devices_empty))
-                devices.forEach { DeviceRow(it) }
-            }
+    Box(modifier = Modifier.fillMaxSize().fileDropTarget(onHover = { dropHover = it }, onFiles = controller::sendDroppedFiles)) {
+        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            Column(
+                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+            ) {
+                Header(controller.serverName, server)
 
-            Section(stringResource(Res.string.section_clipboard)) {
-                SwitchRow(stringResource(Res.string.clipboard_send_to_phone), settings.clipboardSendToPhone) { on ->
-                    controller.settings.update { it.copy(clipboardSendToPhone = on) }
+                Section(stringResource(Res.string.section_devices)) {
+                    if (devices.isEmpty()) Hint(stringResource(Res.string.devices_empty))
+                    devices.forEach { device ->
+                        DeviceRow(device, onSendFiles = { files -> controller.sendFiles(device.fingerprint, files) })
+                    }
                 }
-                SwitchRow(stringResource(Res.string.clipboard_receive_from_phone), settings.clipboardReceiveFromPhone) { on ->
-                    controller.settings.update { it.copy(clipboardReceiveFromPhone = on) }
+
+                TransfersSection(controller)
+
+                Section(stringResource(Res.string.section_clipboard)) {
+                    SwitchRow(stringResource(Res.string.clipboard_send_to_phone), settings.clipboardSendToPhone) { on ->
+                        controller.settings.update { it.copy(clipboardSendToPhone = on) }
+                    }
+                    SwitchRow(stringResource(Res.string.clipboard_receive_from_phone), settings.clipboardReceiveFromPhone) { on ->
+                        controller.settings.update { it.copy(clipboardReceiveFromPhone = on) }
+                    }
+                    lastSent?.let { ClipLine(Res.string.clipboard_last_sent, it) }
+                    lastReceived?.let { ClipLine(Res.string.clipboard_last_received, it) }
+                    Hint(stringResource(Res.string.clipboard_phone_hint))
                 }
-                lastSent?.let { ClipLine(Res.string.clipboard_last_sent, it) }
-                lastReceived?.let { ClipLine(Res.string.clipboard_last_received, it) }
-                Hint(stringResource(Res.string.clipboard_phone_hint))
-            }
 
-            EnhancedSection(controller)
+                EnhancedSection(controller)
 
-            Section(stringResource(Res.string.section_pairing)) {
-                PairingPanel(
-                    offer = pairing,
-                    canPair = server is ServerStatus.Running,
-                    onStart = controller::startPairing,
-                    onCancel = controller::cancelPairing,
-                )
-            }
-
-            Section(stringResource(Res.string.section_trusted)) {
-                if (trusted.isEmpty()) Hint(stringResource(Res.string.trusted_empty))
-                trusted.forEach { peer ->
-                    TrustedRow(
-                        peer = peer,
-                        connected = devices.any { it.fingerprint.hex == peer.fingerprint },
-                        onForget = { controller.forget(peer.fingerprint) },
+                Section(stringResource(Res.string.section_pairing)) {
+                    PairingPanel(
+                        offer = pairing,
+                        canPair = server is ServerStatus.Running,
+                        onStart = controller::startPairing,
+                        onCancel = controller::cancelPairing,
                     )
                 }
-            }
 
-            Text(
-                stringResource(Res.string.own_fingerprint, controller.identity.fingerprint.display()),
-                style = MaterialTheme.typography.labelSmall,
-                fontFamily = FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+                Section(stringResource(Res.string.section_trusted)) {
+                    if (trusted.isEmpty()) Hint(stringResource(Res.string.trusted_empty))
+                    trusted.forEach { peer ->
+                        TrustedRow(
+                            peer = peer,
+                            connected = devices.any { it.fingerprint.hex == peer.fingerprint },
+                            onForget = { controller.forget(peer.fingerprint) },
+                        )
+                    }
+                }
+
+                Text(
+                    stringResource(Res.string.own_fingerprint, controller.identity.fingerprint.display()),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
+        if (dropHover) DropOverlay()
     }
 }
 
@@ -176,11 +188,17 @@ private fun ClipLine(label: StringResource, event: ClipEvent) {
 }
 
 @Composable
-private fun DeviceRow(device: ConnectedDevice) {
+private fun DeviceRow(device: ConnectedDevice, onSendFiles: (List<File>) -> Unit) {
+    val dialogTitle = stringResource(Res.string.send_dialog_title)
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(device.name, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-            Text(device.address, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(device.name, style = MaterialTheme.typography.titleSmall)
+                Text(device.address, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            OutlinedButton(onClick = { chooseFiles(dialogTitle).takeIf { it.isNotEmpty() }?.let(onSendFiles) }) {
+                Text(stringResource(Res.string.device_send_files))
+            }
         }
         val battery = device.battery
         if (battery == null) {

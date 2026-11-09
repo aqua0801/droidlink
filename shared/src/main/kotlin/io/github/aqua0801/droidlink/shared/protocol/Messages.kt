@@ -80,3 +80,35 @@ enum class PowerSource { NONE, AC, USB, WIRELESS, DOCK, UNKNOWN }
 @Serializable
 @SerialName("clip")
 data class ClipboardText(val text: String) : Message()
+
+// ---- File transfer (either direction; see the transfer package) ------------------------
+
+/** Sender proposes a file. Data follows as FILE_CHUNK frames once accepted. */
+@Serializable
+@SerialName("file.offer")
+data class FileOffer(val id: Long, val name: String, val size: Long, val mime: String? = null) : Message()
+
+@Serializable
+@SerialName("file.accept")
+data class FileAccept(val id: Long) : Message()
+
+@Serializable
+@SerialName("file.reject")
+data class FileReject(val id: Long, val reason: TransferError) : Message()
+
+/** Sender finished streaming; the receiver verifies the digest and answers with [FileResult]. */
+@Serializable
+@SerialName("file.complete")
+data class FileComplete(val id: Long, val sha256: String) : Message()
+
+@Serializable
+@SerialName("file.result")
+data class FileResult(val id: Long, val ok: Boolean, val error: TransferError? = null) : Message()
+
+/** Either side aborts the transfer. */
+@Serializable
+@SerialName("file.cancel")
+data class FileCancel(val id: Long) : Message()
+
+@Serializable
+enum class TransferError { DECLINED, STORAGE, TIMEOUT, CONNECTION_LOST, CHECKSUM_MISMATCH, CANCELLED, IO }

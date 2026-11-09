@@ -2,9 +2,11 @@ package io.github.aqua0801.droidlink.shared.link
 
 import io.github.aqua0801.droidlink.shared.crypto.Fingerprint
 import io.github.aqua0801.droidlink.shared.protocol.Bye
+import io.github.aqua0801.droidlink.shared.protocol.FrameType
 import io.github.aqua0801.droidlink.shared.protocol.Message
 import io.github.aqua0801.droidlink.shared.protocol.Ping
 import io.github.aqua0801.droidlink.shared.protocol.Pong
+import io.github.aqua0801.droidlink.shared.protocol.WireFormat
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -22,9 +24,13 @@ import java.util.concurrent.atomic.AtomicLong
 
 typealias MessageHandler = suspend (Message) -> Unit
 
+/** Receives non-message frames (e.g. FrameType.FILE_CHUNK) in arrival order. */
+typealias BinaryHandler = suspend (type: Byte, payload: ByteArray) -> Unit
+
 /**
  * An authenticated link to one peer. Created by [LinkServer] or [LinkClient]; call [start]
  * with a handler to begin receiving. Ping/pong and bye are handled internally.
+ * Set [binaryHandler] before [start] to receive binary frames.
  */
 class LinkSession internal constructor(
     private val connection: Connection,
@@ -46,6 +52,9 @@ class LinkSession internal constructor(
 
     val isOpen: Boolean get() = !closed.isCompleted
 
+    @Volatile
+    var binaryHandler: BinaryHandler? = null
+
     init {
         // Blocking socket reads ignore coroutine cancellation, so closing the socket is
         // what actually unblocks the reader when the session (or its parent) is cancelled.
@@ -64,17 +73,16 @@ class LinkSession internal constructor(
         scope.launch {
             try {
                 while (isActive) {
-                    when (val message = connection.receive() ?: break) {
+                    val frame = connection.receiveFrame() ?: break
+                    if (frame.type != FrameType.MESSAGE) {
+                        binaryHandler?.let { dispatch("frame ${frame.type}") { it(frame.type, frame.payload) } }
+                        continue
+                    }
+                    when (val message = WireFormat.decodeOrNull(frame.payload) ?: continue) {
                         is Ping -> send(Pong(message.nonce))
                         is Pong -> Unit
                         is Bye -> break
-                        else -> try {
-                            handler(message)
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            System.err.println("DroidLink: handler failed for ${message::class.simpleName}: $e")
-                        }
+                        else -> dispatch(message::class.simpleName) { handler(message) }
                     }
                 }
             } catch (_: IOException) {
@@ -97,10 +105,27 @@ class LinkSession internal constructor(
         }
     }
 
+    /** Handler errors are logged, never fatal to the session. */
+    private suspend inline fun dispatch(what: String?, block: () -> Unit) {
+        try {
+            block()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            System.err.println("DroidLink: handler failed for $what: $e")
+        }
+    }
+
     /** @throws IOException if the link is broken. */
     suspend fun send(message: Message) {
         if (!isOpen) throw IOException("session closed")
         connection.send(message)
+    }
+
+    /** @throws IOException if the link is broken. */
+    suspend fun sendBinary(type: Byte, payload: ByteArray) {
+        if (!isOpen) throw IOException("session closed")
+        connection.sendFrame(type, payload)
     }
 
     fun close() {

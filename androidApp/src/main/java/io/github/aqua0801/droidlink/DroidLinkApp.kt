@@ -8,6 +8,7 @@ import io.github.aqua0801.droidlink.data.PairedPcStore
 import io.github.aqua0801.droidlink.data.PhoneSettings
 import io.github.aqua0801.droidlink.link.LinkManager
 import io.github.aqua0801.droidlink.link.NsdDiscovery
+import io.github.aqua0801.droidlink.transfer.PhoneFileTransfers
 import io.github.aqua0801.droidlink.shared.crypto.Identity
 import io.github.aqua0801.droidlink.shared.crypto.IdentityFile
 import kotlinx.coroutines.CoroutineScope
@@ -40,6 +41,7 @@ class AppGraph(app: Application) {
     val nsd = NsdDiscovery(app)
     val link = LinkManager(app, this)
     val clipboard = ClipboardBridge(app, this)
+    val files = PhoneFileTransfers(app, this)
 }
 
 val Context.graph: AppGraph get() = (applicationContext as DroidLinkApp).graph

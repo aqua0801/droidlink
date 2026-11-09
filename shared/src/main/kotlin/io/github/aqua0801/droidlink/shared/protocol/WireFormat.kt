@@ -21,7 +21,11 @@ import java.io.OutputStream
  * control messages later on without changing the framing.
  */
 object FrameType {
+    /** JSON-encoded [Message]. */
     const val MESSAGE: Byte = 1
+
+    /** File data: `[i64 transfer id][bytes]`. See the transfer package. */
+    const val FILE_CHUNK: Byte = 2
 }
 
 class Frame(val type: Byte, val payload: ByteArray)

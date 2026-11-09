@@ -1,6 +1,7 @@
 package io.github.aqua0801.droidlink.shared.link
 
 import io.github.aqua0801.droidlink.shared.crypto.Fingerprint
+import io.github.aqua0801.droidlink.shared.protocol.Frame
 import io.github.aqua0801.droidlink.shared.protocol.FrameReader
 import io.github.aqua0801.droidlink.shared.protocol.FrameType
 import io.github.aqua0801.droidlink.shared.protocol.FrameWriter
@@ -28,12 +29,17 @@ class Connection(private val socket: SSLSocket) : Closeable {
             socket.soTimeout = value
         }
 
-    suspend fun send(message: Message) {
-        val bytes = WireFormat.encode(message)
+    suspend fun send(message: Message) = sendFrame(FrameType.MESSAGE, WireFormat.encode(message))
+
+    /** Writes one frame. Frames from concurrent senders interleave whole, never mixed. */
+    suspend fun sendFrame(type: Byte, payload: ByteArray) {
         writeLock.withLock {
-            withContext(Dispatchers.IO) { writer.write(FrameType.MESSAGE, bytes) }
+            withContext(Dispatchers.IO) { writer.write(type, payload) }
         }
     }
+
+    /** Blocking: call from an IO thread. Returns null on end of stream. */
+    fun receiveFrame(): Frame? = reader.read()
 
     /**
      * Blocking: call from an IO thread. Returns null on end of stream.

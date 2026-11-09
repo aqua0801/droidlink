@@ -52,13 +52,20 @@ import io.github.aqua0801.droidlink.data.PairedPc
 import io.github.aqua0801.droidlink.link.LinkState
 import io.github.aqua0801.droidlink.link.fingerprint
 import io.github.aqua0801.droidlink.shared.crypto.Fingerprint
+import io.github.aqua0801.droidlink.shared.transfer.Transfer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.DateFormat
 import java.util.Date
 
 @Composable
-fun MainScreen(graph: AppGraph, onScan: () -> Unit, onSendClipboard: () -> Unit) {
+fun MainScreen(
+    graph: AppGraph,
+    onScan: () -> Unit,
+    onSendClipboard: () -> Unit,
+    onPickFiles: () -> Unit,
+    onOpenFile: (Transfer) -> Unit,
+) {
     val state by graph.link.state.collectAsStateWithLifecycle()
     val pcs by graph.pairedPcs.pcs.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
@@ -86,6 +93,7 @@ fun MainScreen(graph: AppGraph, onScan: () -> Unit, onSendClipboard: () -> Unit)
             }
             item { BatteryOptimizationCard() }
             item { ClipboardCard(graph, connected = state is LinkState.Connected, onSendNow = onSendClipboard) }
+            item { FilesCard(graph, connected = state is LinkState.Connected, onPick = onPickFiles, onOpen = onOpenFile) }
             item {
                 Text(
                     stringResource(R.string.section_paired),

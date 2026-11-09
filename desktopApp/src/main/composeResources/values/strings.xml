@@ -76,4 +76,37 @@
     <string name="install_title">安裝 APK</string>
     <string name="install_choose">選擇 APK 檔案…</string>
     <string name="install_dialog_title">選擇要安裝到手機的 APK</string>
+
+    <string name="section_transfers">檔案傳輸</string>
+    <string name="transfers_empty">把檔案拖曳到這個視窗就能傳到手機，或按已連線裝置旁的「傳送檔案」。手機傳來的檔案會存到 %1$s。</string>
+    <string name="transfers_open_folder">開啟下載資料夾</string>
+    <string name="transfers_clear">清除已完成</string>
+    <string name="transfers_drop_here">放開以傳送到手機</string>
+    <string name="device_send_files">傳送檔案</string>
+    <string name="send_dialog_title">選擇要傳到手機的檔案</string>
+    <string name="drop_no_device">沒有已連線的手機，無法傳送。</string>
+    <string name="drop_multiple_devices">有多支手機連線中，請用各裝置旁的「傳送檔案」選擇要傳給誰。</string>
+
+    <string name="transfer_to">傳送至 %1$s</string>
+    <string name="transfer_from">來自 %1$s</string>
+    <string name="transfer_waiting">等待對方接收…</string>
+    <string name="transfer_progress">%1$s / %2$s</string>
+    <string name="transfer_sent">已傳送 · %1$s</string>
+    <string name="transfer_saved">已儲存 · %1$s</string>
+    <string name="transfer_cancelled">已取消</string>
+    <string name="transfer_failed">失敗：%1$s</string>
+    <string name="transfer_cancel">取消</string>
+    <string name="transfer_open">開啟</string>
+    <string name="transfer_reveal">顯示位置</string>
+
+    <string name="error_declined">對方拒絕接收</string>
+    <string name="error_storage">儲存空間不足或無法寫入</string>
+    <string name="error_timeout">對方沒有回應</string>
+    <string name="error_connection_lost">連線中斷</string>
+    <string name="error_checksum">檔案驗證失敗</string>
+    <string name="error_cancelled">已取消</string>
+    <string name="error_io">讀寫錯誤</string>
+
+    <string name="notify_received_title">已收到檔案</string>
+    <string name="notify_received_body">%1$s（來自 %2$s）</string>
 </resources>

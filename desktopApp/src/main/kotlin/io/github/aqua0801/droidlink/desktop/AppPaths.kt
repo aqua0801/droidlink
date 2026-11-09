@@ -10,6 +10,9 @@ class AppPaths(val dir: File) {
     val trustedFile = File(dir, "trusted-devices.json")
     val settingsFile = File(dir, "settings.json")
 
+    /** Received files go to `<home>/Downloads/DroidLink`. */
+    val downloadsDir = File(System.getProperty("user.home"), "Downloads${File.separator}DroidLink")
+
     companion object {
         fun default(): AppPaths {
             val isWindows = System.getProperty("os.name").lowercase().contains("win")

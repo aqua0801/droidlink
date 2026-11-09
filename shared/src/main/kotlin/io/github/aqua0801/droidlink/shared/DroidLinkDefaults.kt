@@ -17,4 +17,10 @@ object DroidLinkDefaults {
 
     /** Larger clipboard texts are not synced (UTF-16 chars; keeps frames well under the limit). */
     const val CLIPBOARD_MAX_CHARS = 1_000_000
+
+    /** File data per FILE_CHUNK frame; small enough that control messages interleave promptly. */
+    const val FILE_CHUNK_BYTES = 64 * 1024
+
+    /** How long a sender waits for the receiver to accept, or to confirm the digest. */
+    const val FILE_RESPONSE_TIMEOUT_MS = 60_000L
 }

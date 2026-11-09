@@ -67,4 +67,39 @@
     <string name="battery_opt_action">允許背景執行</string>
     <string name="notif_channel_link">連線狀態</string>
     <string name="notif_preparing">準備中…</string>
+
+    <!-- File transfer -->
+    <string name="send_files_to_pc">傳送檔案到電腦</string>
+    <string name="section_files">檔案傳輸</string>
+    <string name="files_pick">選擇檔案傳到電腦</string>
+    <string name="files_hint">收到的檔案存在「下載/DroidLink」。在其他 App 也能用分享選單的「傳送檔案到電腦」。</string>
+    <string name="files_clear">清除已完成</string>
+    <string name="files_not_connected">尚未連線到電腦</string>
+    <plurals name="files_sending">
+        <item quantity="other">開始傳送 %1$d 個檔案</item>
+    </plurals>
+    <string name="files_unreadable_some">（%1$d 個檔案無法讀取）</string>
+    <string name="files_unreadable_all">無法讀取所選的檔案</string>
+    <string name="files_received_title">已收到檔案</string>
+    <string name="files_received_body">%1$s（來自 %2$s）</string>
+    <string name="notif_channel_files">檔案傳輸</string>
+
+    <string name="transfer_to">傳送至 %1$s</string>
+    <string name="transfer_from">來自 %1$s</string>
+    <string name="transfer_waiting">等待對方接收…</string>
+    <string name="transfer_progress">%1$s / %2$s</string>
+    <string name="transfer_sent">已傳送 · %1$s</string>
+    <string name="transfer_saved">已儲存 · %1$s</string>
+    <string name="transfer_cancelled">已取消</string>
+    <string name="transfer_failed">失敗：%1$s</string>
+    <string name="transfer_cancel">取消</string>
+    <string name="transfer_open">開啟</string>
+    <string name="transfer_no_viewer">沒有可以開啟這個檔案的 App</string>
+
+    <string name="error_declined">對方拒絕接收</string>
+    <string name="error_storage">儲存空間不足或無法寫入</string>
+    <string name="error_timeout">對方沒有回應</string>
+    <string name="error_checksum">檔案驗證失敗</string>
+    <string name="error_cancelled">已取消</string>
+    <string name="error_io">讀寫錯誤</string>
 </resources>

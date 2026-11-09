@@ -53,6 +53,27 @@
             </intent-filter>
         </activity>
 
+        <!-- Share-sheet target for sending files of any type to the PC. -->
+        <activity
+            android:name=".transfer.FileSendActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:label="@string/send_files_to_pc"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+        </activity>
+
         <!-- The scanner library locks itself to landscape by default. -->
         <activity
             android:name="com.journeyapps.barcodescanner.CaptureActivity"

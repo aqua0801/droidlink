@@ -15,6 +15,13 @@ import io.github.aqua0801.droidlink.desktop.resources.notify_low_body
 import io.github.aqua0801.droidlink.desktop.resources.notify_low_title
 import io.github.aqua0801.droidlink.desktop.resources.notify_paired_body
 import io.github.aqua0801.droidlink.desktop.resources.notify_paired_title
+import io.github.aqua0801.droidlink.desktop.resources.notify_received_body
+import io.github.aqua0801.droidlink.desktop.resources.notify_received_title
+import io.github.aqua0801.droidlink.desktop.transfer.DesktopIncomingFiles
+import io.github.aqua0801.droidlink.shared.transfer.Direction
+import io.github.aqua0801.droidlink.shared.transfer.FileSource
+import io.github.aqua0801.droidlink.shared.transfer.FileTransfers
+import io.github.aqua0801.droidlink.shared.transfer.TransferStatus
 import io.github.aqua0801.droidlink.shared.crypto.Fingerprint
 import io.github.aqua0801.droidlink.shared.crypto.Identity
 import io.github.aqua0801.droidlink.shared.crypto.IdentityFile
@@ -35,8 +42,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
+import java.io.File
 import java.io.IOException
 import java.net.InetAddress
+import java.nio.file.Files
 import java.util.concurrent.ConcurrentHashMap
 
 sealed interface ServerStatus {
@@ -54,6 +63,9 @@ data class ConnectedDevice(
 )
 
 class PairingOffer(val info: PairingInfo, val qr: ImageBitmap, val expiresAt: Long)
+
+/** Why files dropped on the window were not sent. */
+enum class DropNotice { NO_DEVICE, MULTIPLE_DEVICES }
 
 /** Owns the server, the trusted-device list, pairing and per-device state. UI reads the flows. */
 class DesktopController(
@@ -76,6 +88,14 @@ class DesktopController(
     /** Enhanced mode (ADB). Independent of the P2P link above. */
     val agent = AgentController(scope)
 
+    /** File transfer over the P2P link, both directions. */
+    val downloadsDir: File get() = paths.downloadsDir
+    val files = FileTransfers(scope, DesktopIncomingFiles(paths.downloadsDir))
+
+    private val _dropNotice = MutableStateFlow<DropNotice?>(null)
+    val dropNotice: StateFlow<DropNotice?> = _dropNotice.asStateFlow()
+    private var dropNoticeJob: Job? = null
+
     private val _serverStatus = MutableStateFlow<ServerStatus>(ServerStatus.Starting)
     val serverStatus: StateFlow<ServerStatus> = _serverStatus.asStateFlow()
 
@@ -96,6 +116,13 @@ class DesktopController(
         scope.launch {
             agent.clipboardIn.collect { text ->
                 if (settings.settings.value.clipboardReceiveFromPhone) clipboard.applyRemote(text)
+            }
+        }
+        scope.launch {
+            files.finished.collect { t ->
+                if (t.direction == Direction.RECEIVE && t.status == TransferStatus.DONE) {
+                    notifier.notify(getString(Res.string.notify_received_title), getString(Res.string.notify_received_body, t.name, t.peerName))
+                }
             }
         }
         scope.launch(Dispatchers.IO) {
@@ -159,8 +186,40 @@ class DesktopController(
         batteryAlerts.remove(fingerprint)
     }
 
+    /** Sends regular files (folders are skipped) to one connected phone. */
+    fun sendFiles(fingerprint: Fingerprint, list: List<File>) {
+        val session = sessions[fingerprint] ?: return
+        list.filter { it.isFile }.forEach { file ->
+            val mime = runCatching { Files.probeContentType(file.toPath()) }.getOrNull()
+            files.send(session, FileSource(file.name, file.length(), mime) { file.inputStream() })
+        }
+    }
+
+    /** Files dropped on the window go to the phone when exactly one is connected. */
+    fun sendDroppedFiles(list: List<File>) {
+        val targets = sessions.keys.toList()
+        when (targets.size) {
+            1 -> {
+                _dropNotice.value = null
+                sendFiles(targets.single(), list)
+            }
+            0 -> showDropNotice(DropNotice.NO_DEVICE)
+            else -> showDropNotice(DropNotice.MULTIPLE_DEVICES)
+        }
+    }
+
+    private fun showDropNotice(notice: DropNotice) {
+        _dropNotice.value = notice
+        dropNoticeJob?.cancel()
+        dropNoticeJob = scope.launch {
+            delay(6_000)
+            _dropNotice.compareAndSet(notice, null)
+        }
+    }
+
     private fun onSessionOpened(session: LinkSession): MessageHandler {
         val fingerprint = session.peerFingerprint
+        files.attach(session)
         // A phone that reconnects replaces its stale session.
         sessions.put(fingerprint, session)?.takeIf { it !== session }?.close()
         _devices.update { list ->
@@ -179,7 +238,8 @@ class DesktopController(
                 _devices.update { list -> list.filterNot { it.fingerprint == fingerprint } }
             }
         }
-        return { message ->
+        return handler@{ message ->
+            if (files.onMessage(session, message)) return@handler
             when (message) {
                 is BatteryStatus -> onBattery(fingerprint, session.peerName, message)
                 is ClipboardText -> if (settings.settings.value.clipboardReceiveFromPhone) clipboard.applyRemote(message.text)
