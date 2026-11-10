@@ -41,6 +41,16 @@ class ClipboardSync(
 
     fun stop() = clipboard.stopWatching()
 
+    /** Reads the PC clipboard now (for the push hotkey). */
+    fun currentText(): String? =
+        clipboard.readText()?.takeIf { it.isNotEmpty() && it.length <= DroidLinkDefaults.CLIPBOARD_MAX_CHARS }
+
+    /** Records an explicit send so the watcher doesn't treat it as new and the UI shows it. */
+    fun recordSent(text: String) {
+        lastKnown = text
+        _lastSent.value = ClipEvent(text)
+    }
+
     fun applyRemote(text: String) {
         lastKnown = text
         clipboard.write(text)

@@ -50,10 +50,9 @@
 
     <!-- Clipboard -->
     <string name="section_clipboard">剪貼簿</string>
-    <string name="clip_auto_send">開啟 DroidLink 時自動傳送剪貼簿</string>
     <string name="clip_receive">接收電腦傳來的剪貼簿</string>
     <string name="clip_send_now">立即傳送剪貼簿</string>
-    <string name="clip_hint">在其他 App 選取文字後，可從選單選「傳到電腦」，也可以用分享選單。把快速設定的「傳送剪貼簿」加到通知欄，就能一鍵送出目前的剪貼簿。</string>
+    <string name="clip_hint">在其他 App 選取文字後選「傳到電腦」，或用分享選單、快速設定的「傳送剪貼簿」，把內容傳到電腦。一般的複製不會同步。電腦開啟 ADB 增強模式時，也可以直接在電腦按快捷鍵拉取手機的剪貼簿。</string>
     <string name="clip_sent">已把剪貼簿傳到電腦</string>
     <string name="clip_not_connected">尚未連線到電腦</string>
     <string name="clip_empty">剪貼簿沒有文字</string>

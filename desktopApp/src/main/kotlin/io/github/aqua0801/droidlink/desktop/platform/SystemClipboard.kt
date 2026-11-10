@@ -20,6 +20,9 @@ interface SystemClipboard {
     fun stopWatching()
     fun write(text: String)
 
+    /** Current text content, or null if there is none (or the clipboard is busy). */
+    fun readText(): String?
+
     companion object {
         fun create(): SystemClipboard {
             val isWindows = System.getProperty("os.name").lowercase().contains("win")
@@ -40,7 +43,7 @@ abstract class AwtClipboard : SystemClipboard {
     private var task: ScheduledFuture<*>? = null
 
     /** Null when there's no text, or the clipboard is momentarily locked by another app. */
-    protected fun readText(): String? = try {
+    override fun readText(): String? = try {
         val clipboard = Toolkit.getDefaultToolkit().systemClipboard
         if (clipboard.isDataFlavorAvailable(DataFlavor.stringFlavor)) {
             clipboard.getData(DataFlavor.stringFlavor) as? String

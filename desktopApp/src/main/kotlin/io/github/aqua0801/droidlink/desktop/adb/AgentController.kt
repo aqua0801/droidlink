@@ -56,12 +56,22 @@ class AgentController(private val scope: CoroutineScope) {
     private val _events = MutableSharedFlow<String>(extraBufferCapacity = 16)
     val events: SharedFlow<String> = _events.asSharedFlow()
 
-    /** Clipboard text reported by the connected phone (background sync). */
+    /** Clipboard text the phone pushed by itself (only while [setAutoPush] is on). */
     private val _clipboardIn = MutableSharedFlow<String>(extraBufferCapacity = 8)
     val clipboardIn: SharedFlow<String> = _clipboardIn.asSharedFlow()
 
+    /** Answers to [requestClipboard]; empty when the phone clipboard holds no text. */
+    private val _clipboardPulled = MutableSharedFlow<String>(extraBufferCapacity = 8)
+    val clipboardPulled: SharedFlow<String> = _clipboardPulled.asSharedFlow()
+
     @Volatile
     private var lastClip: String? = null
+
+    /** Whether the helper reports phone clipboard changes on its own. Off by default. */
+    @Volatile
+    private var autoPush = false
+
+    val isConnected: Boolean get() = _state.value is AgentState.Connected && current != null
 
     val adbAvailable: Boolean get() = Adb.executable != null
 
@@ -135,10 +145,31 @@ class AgentController(private val scope: CoroutineScope) {
         _logcatLines.value = emptyList()
     }
 
-    /** Sends PC clipboard text to the connected phone. Returns true if a helper is connected. */
-    fun sendClipboard(text: String): Boolean {
+    /** Turns the helper's own change reporting on or off, now and for future connections. */
+    fun setAutoPush(enabled: Boolean) {
+        if (autoPush == enabled) return
+        autoPush = enabled
+        val channel = current?.channel ?: return
+        scope.launch(Dispatchers.IO) {
+            runCatching { channel.sendText(AgentFrame.CMD, if (enabled) "clip.start" else "clip.stop") }
+        }
+    }
+
+    /** Asks the phone for its current clipboard; the answer arrives on [clipboardPulled]. */
+    fun requestClipboard(): Boolean {
         val channel = current?.channel ?: return false
-        if (text == lastClip) return true
+        scope.launch(Dispatchers.IO) { runCatching { channel.sendText(AgentFrame.CMD, "clip.get") } }
+        return true
+    }
+
+    /**
+     * Sends PC clipboard text to the connected phone. Returns true if a helper is connected.
+     * [force] skips the "already synced" check, for explicit sends: without auto-push the
+     * phone may have changed since [lastClip] was recorded.
+     */
+    fun sendClipboard(text: String, force: Boolean = false): Boolean {
+        val channel = current?.channel ?: return false
+        if (text == lastClip && !force) return true
         lastClip = text
         scope.launch(Dispatchers.IO) { runCatching { channel.sendText(AgentFrame.CLIP, text) } }
         return true
@@ -278,9 +309,11 @@ class AgentController(private val scope: CoroutineScope) {
             release = parts.getOrElse(1) { "" },
             sdk = parts.getOrElse(2) { "" },
         )
-        // Begin background clipboard sync; the desktop decides whether to apply/forward it.
-        current?.channel?.let { channel ->
-            scope.launch(Dispatchers.IO) { runCatching { channel.sendText(AgentFrame.CMD, "clip.start") } }
+        // Only report phone clipboard changes when automatic phone -> PC sync is chosen.
+        if (autoPush) {
+            current?.channel?.let { channel ->
+                scope.launch(Dispatchers.IO) { runCatching { channel.sendText(AgentFrame.CMD, "clip.start") } }
+            }
         }
     }
 
@@ -293,6 +326,11 @@ class AgentController(private val scope: CoroutineScope) {
                     lastClip = payload
                     _clipboardIn.tryEmit(payload)
                 }
+            }
+            // An explicit pull is always delivered, even if it matches what was synced last.
+            AgentFrame.CLIP_REPLY -> {
+                if (payload.isNotEmpty()) lastClip = payload
+                _clipboardPulled.tryEmit(payload)
             }
         }
     }

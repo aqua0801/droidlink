@@ -19,7 +19,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -40,6 +39,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.aqua0801.droidlink.desktop.ClipEvent
 import io.github.aqua0801.droidlink.desktop.ConnectedDevice
+import io.github.aqua0801.droidlink.desktop.DesktopSettings
+import io.github.aqua0801.droidlink.desktop.PcToPhoneMode
+import io.github.aqua0801.droidlink.desktop.PhoneToPcMode
 import io.github.aqua0801.droidlink.desktop.DesktopController
 import io.github.aqua0801.droidlink.desktop.PairingOffer
 import io.github.aqua0801.droidlink.desktop.ServerStatus
@@ -57,7 +59,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 @Composable
-fun MainScreen(controller: DesktopController) {
+fun MainScreen(controller: DesktopController, onOpenSettings: () -> Unit) {
     val server by controller.serverStatus.collectAsState()
     val devices by controller.devices.collectAsState()
     val pairing by controller.pairing.collectAsState()
@@ -74,7 +76,7 @@ fun MainScreen(controller: DesktopController) {
                 modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp),
             ) {
-                Header(controller.serverName, server)
+                Header(controller.serverName, server, onOpenSettings)
 
                 Section(stringResource(Res.string.section_devices)) {
                     if (devices.isEmpty()) Hint(stringResource(Res.string.devices_empty))
@@ -86,15 +88,12 @@ fun MainScreen(controller: DesktopController) {
                 TransfersSection(controller)
 
                 Section(stringResource(Res.string.section_clipboard)) {
-                    SwitchRow(stringResource(Res.string.clipboard_send_to_phone), settings.clipboardSendToPhone) { on ->
-                        controller.settings.update { it.copy(clipboardSendToPhone = on) }
-                    }
-                    SwitchRow(stringResource(Res.string.clipboard_receive_from_phone), settings.clipboardReceiveFromPhone) { on ->
-                        controller.settings.update { it.copy(clipboardReceiveFromPhone = on) }
-                    }
+                    Text(stringResource(Res.string.clipboard_summary_pc, pcModeLabel(settings)), style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(Res.string.clipboard_summary_phone, phoneModeLabel(settings)), style = MaterialTheme.typography.bodyMedium)
                     lastSent?.let { ClipLine(Res.string.clipboard_last_sent, it) }
                     lastReceived?.let { ClipLine(Res.string.clipboard_last_received, it) }
                     Hint(stringResource(Res.string.clipboard_phone_hint))
+                    OutlinedButton(onClick = onOpenSettings) { Text(stringResource(Res.string.clipboard_open_settings)) }
                 }
 
                 EnhancedSection(controller)
@@ -132,19 +131,36 @@ fun MainScreen(controller: DesktopController) {
 }
 
 @Composable
-private fun Header(name: String, status: ServerStatus) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(stringResource(Res.string.app_name), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
-        val (text, color) = when (status) {
-            ServerStatus.Starting ->
-                stringResource(Res.string.server_starting) to MaterialTheme.colorScheme.onSurfaceVariant
-            is ServerStatus.Running ->
-                stringResource(Res.string.server_running, name, status.port.toString()) to MaterialTheme.colorScheme.primary
-            is ServerStatus.Failed ->
-                stringResource(Res.string.server_failed, status.message) to MaterialTheme.colorScheme.error
+private fun Header(name: String, status: ServerStatus, onOpenSettings: () -> Unit) {
+    Row(verticalAlignment = Alignment.Top) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(Res.string.app_name), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
+            val (text, color) = when (status) {
+                ServerStatus.Starting ->
+                    stringResource(Res.string.server_starting) to MaterialTheme.colorScheme.onSurfaceVariant
+                is ServerStatus.Running ->
+                    stringResource(Res.string.server_running, name, status.port.toString()) to MaterialTheme.colorScheme.primary
+                is ServerStatus.Failed ->
+                    stringResource(Res.string.server_failed, status.message) to MaterialTheme.colorScheme.error
+            }
+            Text(text, style = MaterialTheme.typography.bodyMedium, color = color)
         }
-        Text(text, style = MaterialTheme.typography.bodyMedium, color = color)
+        TextButton(onClick = onOpenSettings) { Text(stringResource(Res.string.action_settings)) }
     }
+}
+
+@Composable
+private fun pcModeLabel(s: DesktopSettings): String = when (s.pcToPhone) {
+    PcToPhoneMode.AUTO -> stringResource(Res.string.mode_auto)
+    PcToPhoneMode.HOTKEY -> stringResource(Res.string.mode_hotkey_with, s.pushHotkey.label)
+    PcToPhoneMode.OFF -> stringResource(Res.string.mode_off)
+}
+
+@Composable
+private fun phoneModeLabel(s: DesktopSettings): String = when (s.phoneToPc) {
+    PhoneToPcMode.AUTO -> stringResource(Res.string.mode_auto_enhanced)
+    PhoneToPcMode.MANUAL -> stringResource(Res.string.mode_manual_with, s.pullHotkey.label)
+    PhoneToPcMode.OFF -> stringResource(Res.string.mode_off)
 }
 
 @Composable
@@ -164,14 +180,6 @@ internal fun Section(title: String, content: @Composable ColumnScope.() -> Unit)
 @Composable
 internal fun Hint(text: String) {
     Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-}
-
-@Composable
-private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        Switch(checked = checked, onCheckedChange = onChange)
-    }
 }
 
 private val clipTimeFormat = DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.systemDefault())

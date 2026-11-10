@@ -4,7 +4,6 @@ import androidx.compose.ui.graphics.ImageBitmap
 import io.github.aqua0801.droidlink.desktop.adb.AgentController
 import io.github.aqua0801.droidlink.desktop.net.MdnsAdvertiser
 import io.github.aqua0801.droidlink.desktop.net.NetworkInfo
-import io.github.aqua0801.droidlink.desktop.platform.SystemClipboard
 import io.github.aqua0801.droidlink.desktop.platform.TrayNotifier
 import io.github.aqua0801.droidlink.desktop.resources.Res
 import io.github.aqua0801.droidlink.desktop.resources.notify_critical_body
@@ -43,7 +42,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
 import java.io.File
-import java.io.IOException
 import java.net.InetAddress
 import java.nio.file.Files
 import java.util.concurrent.ConcurrentHashMap
@@ -83,10 +81,12 @@ class DesktopController(
     private val sessions = ConcurrentHashMap<Fingerprint, LinkSession>()
     private val batteryAlerts = ConcurrentHashMap<Fingerprint, BatteryAlertPolicy>()
 
-    val clipboard = ClipboardSync(SystemClipboard.create(), scope, ::broadcastClipboard)
-
     /** Enhanced mode (ADB). Independent of the P2P link above. */
     val agent = AgentController(scope)
+
+    /** Clipboard modes, hotkeys and routing between the PC, P2P phones and enhanced mode. */
+    val clipboardRouting = ClipboardCoordinator(scope, settings, agent, notifier) { sessions.values }
+    val clipboard: ClipboardSync get() = clipboardRouting.sync
 
     /** File transfer over the P2P link, both directions. */
     val downloadsDir: File get() = paths.downloadsDir
@@ -110,14 +110,8 @@ class DesktopController(
     private var pairingExpiry: Job? = null
 
     fun start() {
-        clipboard.start()
+        clipboardRouting.start()
         agent.startScanning()
-        // Clipboard the phone reports through enhanced mode is applied the same way as P2P text.
-        scope.launch {
-            agent.clipboardIn.collect { text ->
-                if (settings.settings.value.clipboardReceiveFromPhone) clipboard.applyRemote(text)
-            }
-        }
         scope.launch {
             files.finished.collect { t ->
                 if (t.direction == Direction.RECEIVE && t.status == TransferStatus.DONE) {
@@ -147,7 +141,7 @@ class DesktopController(
 
     fun stop() {
         cancelPairing()
-        clipboard.stop()
+        clipboardRouting.stop()
         agent.shutdown()
         sessions.values.forEach { it.close() }
         server?.stop()
@@ -242,27 +236,10 @@ class DesktopController(
             if (files.onMessage(session, message)) return@handler
             when (message) {
                 is BatteryStatus -> onBattery(fingerprint, session.peerName, message)
-                is ClipboardText -> if (settings.settings.value.clipboardReceiveFromPhone) clipboard.applyRemote(message.text)
+                is ClipboardText -> clipboardRouting.onPhoneText(message.text)
                 else -> Unit
             }
         }
-    }
-
-    /** Sends PC clipboard text to every connected phone (P2P link and enhanced mode). */
-    private suspend fun broadcastClipboard(text: String): Boolean {
-        if (!settings.settings.value.clipboardSendToPhone) return false
-        var delivered = false
-        for (session in sessions.values) {
-            try {
-                session.send(ClipboardText(text))
-                delivered = true
-            } catch (_: IOException) {
-                // that session is going away; the others still get it
-            }
-        }
-        // Enhanced mode delivers to the phone in the background, independent of the P2P link.
-        if (agent.sendClipboard(text)) delivered = true
-        return delivered
     }
 
     private suspend fun onBattery(fingerprint: Fingerprint, name: String, status: BatteryStatus) {

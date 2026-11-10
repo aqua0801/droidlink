@@ -38,6 +38,9 @@ private class AgentSession(private val socket: Socket) {
     private val logcat = LogcatReader { line -> runCatching { writer.writeText(FrameType.LOG, line) } }
     private val clipboard = ClipboardBridge { text -> runCatching { writer.writeText(FrameType.CLIP, text) } }
 
+    /** For one-off reads (clip.get); independent of the sync bridge, which may be stopped. */
+    private val clipboardReader by lazy { ClipboardService.create() }
+
     private var apkFile: File? = null
     private var apkOut: FileOutputStream? = null
 
@@ -73,6 +76,10 @@ private class AgentSession(private val socket: Socket) {
             "logcat.stop" -> logcat.stop()
             "clip.start" -> if (!clipboard.start()) runCatching { writer.writeText(FrameType.EVENT, "clip\tunavailable") }
             "clip.stop" -> clipboard.stop()
+            // Reply with the current text (empty if none or unavailable); always answers.
+            "clip.get" -> runCatching {
+                writer.writeText(FrameType.CLIP_REPLY, runCatching { clipboardReader?.getText() }.getOrNull().orEmpty())
+            }
             "shutdown" -> return false
         }
         return true

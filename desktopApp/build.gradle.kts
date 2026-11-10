@@ -29,12 +29,16 @@ dependencies {
     implementation(libs.zxing.core)
     implementation(libs.jmdns)
     implementation(libs.jna)
+    implementation(libs.jna.platform)
 
     testImplementation(libs.kotlin.test)
 }
 
 tasks.test {
     useJUnitPlatform()
+    // Opt-in: `-PrealHotkeys=true` runs the test that registers a real global hotkey and
+    // presses it with java.awt.Robot (it sends keystrokes to this desktop session).
+    systemProperty("droidlink.realHotkeys", providers.gradleProperty("realHotkeys").getOrElse("false"))
 }
 
 // Bundle the phone-side helper (DEX jar from the :agent module) as a resource. At runtime it is

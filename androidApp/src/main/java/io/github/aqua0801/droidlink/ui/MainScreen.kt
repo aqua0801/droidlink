@@ -189,7 +189,6 @@ private fun Detail(text: String) =
 
 @Composable
 private fun ClipboardCard(graph: AppGraph, connected: Boolean, onSendNow: () -> Unit) {
-    val autoSend by graph.settings.clipboardAutoSend.collectAsStateWithLifecycle()
     val receive by graph.settings.clipboardReceive.collectAsStateWithLifecycle()
     val lastSent by graph.clipboard.lastSent.collectAsStateWithLifecycle()
     val lastReceived by graph.clipboard.lastReceived.collectAsStateWithLifecycle()
@@ -197,7 +196,6 @@ private fun ClipboardCard(graph: AppGraph, connected: Boolean, onSendNow: () -> 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Title(stringResource(R.string.section_clipboard))
-            SwitchRow(stringResource(R.string.clip_auto_send), autoSend, graph.settings::setClipboardAutoSend)
             SwitchRow(stringResource(R.string.clip_receive), receive, graph.settings::setClipboardReceive)
             lastSent?.let { ClipLine(R.string.clip_last_sent, it) }
             lastReceived?.let { ClipLine(R.string.clip_last_received, it) }

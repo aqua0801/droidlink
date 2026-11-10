@@ -33,10 +33,6 @@ class ClipboardBridge(private val context: Context, private val graph: AppGraph)
 
     private val manager = context.getSystemService(ClipboardManager::class.java)
 
-    /** Last text that crossed the link in either direction; used to avoid echoes. */
-    @Volatile
-    private var lastSynced: String? = null
-
     private val _lastSent = MutableStateFlow<ClipEvent?>(null)
     val lastSent: StateFlow<ClipEvent?> = _lastSent.asStateFlow()
 
@@ -45,7 +41,6 @@ class ClipboardBridge(private val context: Context, private val graph: AppGraph)
 
     suspend fun applyRemote(text: String) {
         if (!graph.settings.clipboardReceive.value) return
-        lastSynced = text
         withContext(Dispatchers.Main) {
             manager.setPrimaryClip(ClipData.newPlainText("DroidLink", text))
         }
@@ -66,15 +61,10 @@ class ClipboardBridge(private val context: Context, private val graph: AppGraph)
         val session = graph.link.session.value ?: return SendResult.NOT_CONNECTED
         return try {
             session.send(ClipboardText(text))
-            lastSynced = text
             _lastSent.value = ClipEvent(text)
             SendResult.SENT
         } catch (_: IOException) {
             SendResult.FAILED
         }
     }
-
-    /** Like [send], but skips text that already crossed the link. Null when skipped. */
-    suspend fun sendIfNew(text: String?): SendResult? =
-        if (text.isNullOrEmpty() || text == lastSynced || graph.link.session.value == null) null else send(text)
 }

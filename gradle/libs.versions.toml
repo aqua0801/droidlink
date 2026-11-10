@@ -36,6 +36,7 @@ zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
 zxing-android-embedded = { module = "com.journeyapps:zxing-android-embedded", version.ref = "zxingAndroidEmbedded" }
 jmdns = { module = "org.jmdns:jmdns", version.ref = "jmdns" }
 jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
+jna-platform = { module = "net.java.dev.jna:jna-platform", version.ref = "jna" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 
 [plugins]

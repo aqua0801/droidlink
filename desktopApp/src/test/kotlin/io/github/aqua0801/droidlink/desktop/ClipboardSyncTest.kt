@@ -26,6 +26,8 @@ class ClipboardSyncTest {
             watcher?.invoke(text)
         }
 
+        override fun readText(): String? = written.lastOrNull()
+
         fun userCopies(text: String) = watcher?.invoke(text)
     }
 

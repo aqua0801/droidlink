@@ -11,13 +11,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.painter.Painter
+import io.github.aqua0801.droidlink.desktop.ThemeMode
 
 private val Green = Color(0xFF3DDC84)
 private val DeepGreen = Color(0xFF006D3B)
 
 @Composable
-fun DroidLinkDesktopTheme(content: @Composable () -> Unit) {
-    val colors = if (isSystemInDarkTheme()) {
+fun isDarkTheme(mode: ThemeMode): Boolean = when (mode) {
+    ThemeMode.SYSTEM -> isSystemInDarkTheme()
+    ThemeMode.LIGHT -> false
+    ThemeMode.DARK -> true
+}
+
+@Composable
+fun DroidLinkDesktopTheme(dark: Boolean, content: @Composable () -> Unit) {
+    val colors = if (dark) {
         darkColorScheme(primary = Green, secondary = Green)
     } else {
         lightColorScheme(primary = DeepGreen, secondary = DeepGreen)

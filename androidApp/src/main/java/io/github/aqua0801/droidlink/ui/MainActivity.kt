@@ -12,7 +12,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import io.github.aqua0801.droidlink.R
-import io.github.aqua0801.droidlink.clipboard.ClipboardBridge
 import io.github.aqua0801.droidlink.graph
 import androidx.lifecycle.lifecycleScope
 import io.github.aqua0801.droidlink.shared.pairing.PairingInfo
@@ -57,18 +56,6 @@ class MainActivity : ComponentActivity() {
                     onPickFiles = { filePicker.launch(arrayOf("*/*")) },
                     onOpenFile = ::openReceived,
                 )
-            }
-        }
-    }
-
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        // Focus is the only moment Android lets us read the clipboard.
-        if (!hasFocus || !graph.settings.clipboardAutoSend.value) return
-        val text = graph.clipboard.readClipboard()
-        graph.scope.launch {
-            if (graph.clipboard.sendIfNew(text) == ClipboardBridge.SendResult.SENT) {
-                graph.link.notify(getString(R.string.clip_sent))
             }
         }
     }

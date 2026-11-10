@@ -20,6 +20,7 @@ internal object FrameType {
     const val APK_DATA: Byte = 5 // desktop -> agent: a chunk of APK bytes
     const val APK_END: Byte = 6 // desktop -> agent: file name, marks the end of the APK
     const val CLIP: Byte = 7 // both directions: clipboard text (UTF-8)
+    const val CLIP_REPLY: Byte = 8 // agent -> desktop: answer to "clip.get" (UTF-8, may be empty)
 }
 
 internal const val MAX_FRAME_BYTES = 16 * 1024 * 1024
