@@ -1,6 +1,7 @@
 package io.github.aqua0801.droidlink.desktop
 
 import io.github.aqua0801.droidlink.desktop.hotkey.Hotkey
+import io.github.aqua0801.droidlink.shared.settings.ThemeMode
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals

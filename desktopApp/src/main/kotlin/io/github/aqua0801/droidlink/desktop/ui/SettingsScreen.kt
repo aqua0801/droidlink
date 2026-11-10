@@ -47,12 +47,12 @@ import androidx.compose.ui.unit.dp
 import io.github.aqua0801.droidlink.desktop.DesktopController
 import io.github.aqua0801.droidlink.desktop.PcToPhoneMode
 import io.github.aqua0801.droidlink.desktop.PhoneToPcMode
-import io.github.aqua0801.droidlink.desktop.ThemeMode
 import io.github.aqua0801.droidlink.desktop.hotkey.Hotkey
 import io.github.aqua0801.droidlink.desktop.hotkey.HotkeyAction
 import io.github.aqua0801.droidlink.desktop.hotkey.HotkeyStatus
 import io.github.aqua0801.droidlink.desktop.platform.FileReveal
 import io.github.aqua0801.droidlink.desktop.resources.*
+import io.github.aqua0801.droidlink.shared.settings.ThemeMode
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import java.awt.event.KeyEvent as AwtKeyEvent
@@ -69,7 +69,7 @@ fun SettingsScreen(controller: DesktopController, onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = onBack) { Text("← " + stringResource(Res.string.settings_back)) }
+                IconAction(Res.drawable.ic_arrow_back, stringResource(Res.string.settings_back), onBack)
                 Text(stringResource(Res.string.settings_title), style = MaterialTheme.typography.headlineMedium)
             }
 

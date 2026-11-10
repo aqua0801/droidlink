@@ -3,6 +3,10 @@
 <resources>
     <string name="app_name" translatable="false">DroidLink</string>
     <string name="send_to_pc">傳到電腦</string>
+    <string name="theme_button">主題：%1$s</string>
+    <string name="theme_system">跟隨系統</string>
+    <string name="theme_light">淺色</string>
+    <string name="theme_dark">深色</string>
     <string name="tile_label">傳送剪貼簿</string>
 
     <!-- Connection status -->

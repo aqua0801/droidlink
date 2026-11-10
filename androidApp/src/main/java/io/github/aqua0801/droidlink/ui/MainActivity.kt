@@ -6,9 +6,15 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import android.graphics.Color
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import io.github.aqua0801.droidlink.R
@@ -48,7 +54,14 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            DroidLinkTheme {
+            val themeMode by graph.settings.theme.collectAsStateWithLifecycle()
+            val dark = themeMode.isDark(isSystemInDarkTheme())
+            // System bar icons follow the app theme, not only the OS setting.
+            LaunchedEffect(dark) {
+                val style = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { dark }
+                enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
+            }
+            DroidLinkTheme(dark) {
                 MainScreen(
                     graph = graph,
                     onScan = ::launchScanner,

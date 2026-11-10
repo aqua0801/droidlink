@@ -145,7 +145,7 @@ private fun Header(name: String, status: ServerStatus, onOpenSettings: () -> Uni
             }
             Text(text, style = MaterialTheme.typography.bodyMedium, color = color)
         }
-        TextButton(onClick = onOpenSettings) { Text(stringResource(Res.string.action_settings)) }
+        IconAction(Res.drawable.ic_settings, stringResource(Res.string.action_settings), onOpenSettings)
     }
 }
 

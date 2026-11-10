@@ -1,6 +1,7 @@
 package io.github.aqua0801.droidlink.desktop
 
 import io.github.aqua0801.droidlink.desktop.hotkey.Hotkey
+import io.github.aqua0801.droidlink.shared.settings.ThemeMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,10 +23,6 @@ enum class PcToPhoneMode { AUTO, HOTKEY, OFF }
  */
 @Serializable
 enum class PhoneToPcMode { AUTO, MANUAL, OFF }
-
-/** App colours: follow the OS light/dark setting, or force one. */
-@Serializable
-enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
 @Serializable
 data class DesktopSettings(
