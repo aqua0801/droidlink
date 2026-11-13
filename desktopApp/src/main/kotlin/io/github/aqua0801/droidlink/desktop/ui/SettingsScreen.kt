@@ -12,12 +12,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -44,6 +47,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import io.github.aqua0801.droidlink.desktop.BatteryAlertSettings
 import io.github.aqua0801.droidlink.desktop.DesktopController
 import io.github.aqua0801.droidlink.desktop.PcToPhoneMode
 import io.github.aqua0801.droidlink.desktop.PhoneToPcMode
@@ -56,6 +60,7 @@ import io.github.aqua0801.droidlink.shared.settings.ThemeMode
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import java.awt.event.KeyEvent as AwtKeyEvent
+import kotlin.math.roundToInt
 
 @Composable
 fun SettingsScreen(controller: DesktopController, onBack: () -> Unit) {
@@ -126,6 +131,25 @@ fun SettingsScreen(controller: DesktopController, onBack: () -> Unit) {
                 )
             }
 
+            Section(stringResource(Res.string.settings_battery)) {
+                BatterySettings(settings.battery) { next -> update { it.copy(battery = next) } }
+            }
+
+            Section(stringResource(Res.string.settings_notifications)) {
+                val n = settings.notifications
+                SwitchOption(n.clipboard, Res.string.notify_clipboard, Res.string.notify_clipboard_desc) { on ->
+                    update { it.copy(notifications = it.notifications.copy(clipboard = on)) }
+                }
+                SwitchOption(n.fileReceived, Res.string.notify_file_received, Res.string.notify_file_received_desc) { on ->
+                    update { it.copy(notifications = it.notifications.copy(fileReceived = on)) }
+                }
+                Text(
+                    stringResource(Res.string.notify_errors_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
             Section(stringResource(Res.string.settings_files)) {
                 Text(stringResource(Res.string.settings_downloads), style = MaterialTheme.typography.bodyMedium)
                 Text(controller.downloadsDir.absolutePath, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
@@ -134,6 +158,51 @@ fun SettingsScreen(controller: DesktopController, onBack: () -> Unit) {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun BatterySettings(value: BatteryAlertSettings, onChange: (BatteryAlertSettings) -> Unit) {
+    // Local while dragging; persisted when the thumb is released.
+    var dragging by remember(value.lowThreshold) { mutableStateOf(value.lowThreshold.toFloat()) }
+    val shown = dragging.roundToInt()
+
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        SwitchOption(value.lowEnabled, Res.string.alert_battery_low, null) { onChange(value.copy(lowEnabled = it)) }
+        Text(
+            stringResource(Res.string.alert_battery_low_threshold, "$shown%"),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Slider(
+            value = dragging,
+            onValueChange = { dragging = it },
+            onValueChangeFinished = { onChange(value.copy(lowThreshold = dragging.roundToInt())) },
+            valueRange = BatteryAlertSettings.MIN_LOW_THRESHOLD.toFloat()..BatteryAlertSettings.MAX_LOW_THRESHOLD.toFloat(),
+            // 5% steps: 5, 10, ... 50
+            steps = (BatteryAlertSettings.MAX_LOW_THRESHOLD - BatteryAlertSettings.MIN_LOW_THRESHOLD) / 5 - 1,
+            enabled = value.lowEnabled,
+        )
+        SwitchOption(value.fullEnabled, Res.string.alert_battery_full, Res.string.alert_battery_full_desc) { onChange(value.copy(fullEnabled = it)) }
+    }
+}
+
+@Composable
+private fun SwitchOption(checked: Boolean, title: StringResource, description: StringResource?, onChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .toggleable(value = checked, onValueChange = onChange, role = Role.Switch)
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f).padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(stringResource(title), style = MaterialTheme.typography.bodyLarge)
+            description?.let {
+                Text(stringResource(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        Switch(checked = checked, onCheckedChange = null)
     }
 }
 

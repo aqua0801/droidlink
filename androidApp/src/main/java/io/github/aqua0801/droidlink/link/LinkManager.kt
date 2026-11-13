@@ -24,6 +24,9 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -36,18 +39,26 @@ sealed interface LinkState {
     data class Pairing(val serverName: String) : LinkState
     data class Connecting(val fingerprint: String, val pcName: String, val attempt: Int, val lastError: String?) : LinkState
     data class Connected(val fingerprint: String, val pcName: String, val host: String) : LinkState
+
+    /**
+     * Automatic retries ran out. Nothing is attempted until the user asks (notification tap,
+     * returning to the app) or mDNS sees the PC on the LAN again.
+     */
+    data class Disconnected(val fingerprint: String, val pcName: String, val lastError: String?) : LinkState
 }
 
 val LinkState.fingerprint: String?
     get() = when (this) {
         is LinkState.Connected -> fingerprint
         is LinkState.Connecting -> fingerprint
+        is LinkState.Disconnected -> fingerprint
         else -> null
     }
 
 /**
  * Keeps the phone connected to one chosen PC: tries every known address, reconnects with
- * backoff, and jumps the queue when mDNS sees the PC appear on the LAN.
+ * backoff, and jumps the queue when mDNS sees the PC appear on the LAN. After a fixed
+ * number of failures in a row it stops and waits in [LinkState.Disconnected].
  */
 class LinkManager(private val context: Context, private val graph: AppGraph) {
     private val scope = graph.scope
@@ -82,6 +93,12 @@ class LinkManager(private val context: Context, private val graph: AppGraph) {
         synchronized(this) {
             loopJob = scope.launch { connectLoop(gen, fingerprint) }
         }
+    }
+
+    /** Starts over after the retries ran out; does nothing in any other state. */
+    fun retryIfGaveUp() {
+        val gaveUp = _state.value as? LinkState.Disconnected ?: return
+        connect(gaveUp.fingerprint)
     }
 
     /** Called when the service is (re)started without an explicit request. */
@@ -189,6 +206,13 @@ class LinkManager(private val context: Context, private val graph: AppGraph) {
                 }
                 is Attempt.Failed -> {
                     lastError = result.message
+                    if (attempt >= MAX_ATTEMPTS) {
+                        setState(gen, LinkState.Disconnected(fingerprint, pc.name, lastError))
+                        waitForPcOnLan(fingerprint)
+                        attempt = 0
+                        backoffMs = INITIAL_BACKOFF_MS
+                        continue
+                    }
                     // Wait out the backoff, but retry at once if mDNS reports a new address.
                     withTimeoutOrNull(backoffMs) {
                         graph.nsd.found.first { found ->
@@ -199,6 +223,11 @@ class LinkManager(private val context: Context, private val graph: AppGraph) {
                 }
             }
         }
+    }
+
+    /** Suspends until mDNS reports the PC appearing or changing address (not its current entry). */
+    private suspend fun waitForPcOnLan(fingerprint: String) {
+        graph.nsd.found.map { it[fingerprint] }.distinctUntilChanged().drop(1).first { it != null }
     }
 
     private sealed interface Attempt {
@@ -271,5 +300,8 @@ class LinkManager(private val context: Context, private val graph: AppGraph) {
     private companion object {
         const val INITIAL_BACKOFF_MS = 1_000L
         const val MAX_BACKOFF_MS = 15_000L
+
+        /** With the backoff above this gives up after roughly a minute. */
+        const val MAX_ATTEMPTS = 8
     }
 }

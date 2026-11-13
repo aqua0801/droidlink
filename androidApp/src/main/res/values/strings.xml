@@ -105,4 +105,24 @@
     <string name="error_checksum">檔案驗證失敗</string>
     <string name="error_cancelled">已取消</string>
     <string name="error_io">讀寫錯誤</string>
+
+    <!-- Reconnect limit -->
+    <string name="status_gave_up">已中斷與 %1$s 的連線</string>
+    <string name="status_gave_up_hint">自動重試已停止。電腦回到同一個網路時會自動接上，也可以手動重新連線。</string>
+    <string name="action_reconnect">重新連線</string>
+    <string name="notif_gave_up">已中斷與 %1$s 的連線，點一下重新連線</string>
+
+    <!-- Settings -->
+    <string name="settings_title">設定</string>
+    <string name="settings_back">返回</string>
+    <string name="settings_appearance">外觀</string>
+    <string name="settings_notifications">提示</string>
+    <string name="clip_receive_desc">電腦複製或推送時，寫入手機剪貼簿</string>
+    <string name="notify_clip_sent">剪貼簿傳送成功提示</string>
+    <string name="notify_clip_sent_desc">從選取選單、分享或快速設定傳到電腦後，顯示「已傳送」</string>
+    <string name="notify_files_sent">檔案傳送提示</string>
+    <string name="notify_files_sent_desc">從其他 App 分享檔案到 DroidLink 後，顯示傳送中的提示</string>
+    <string name="notify_file_received">收到檔案通知</string>
+    <string name="notify_file_received_desc">電腦傳來的檔案存好後，跳出通知可直接開啟</string>
+    <string name="notify_errors_hint">失敗或需要處理的提示（例如尚未連線）一律會顯示。</string>
 </resources>

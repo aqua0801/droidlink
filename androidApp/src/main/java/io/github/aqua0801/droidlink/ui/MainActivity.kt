@@ -3,6 +3,7 @@ package io.github.aqua0801.droidlink.ui
 import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -13,13 +14,15 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import android.graphics.Color
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import io.github.aqua0801.droidlink.R
 import io.github.aqua0801.droidlink.graph
-import androidx.lifecycle.lifecycleScope
 import io.github.aqua0801.droidlink.shared.pairing.PairingInfo
 import io.github.aqua0801.droidlink.shared.transfer.Transfer
 import kotlinx.coroutines.Dispatchers
@@ -34,14 +37,15 @@ class MainActivity : ComponentActivity() {
     private val notificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
-    private val filePicker = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
-        if (uris.isEmpty()) return@registerForActivityResult
-        // Open the streams while this activity (and so the URI grant) is alive.
-        lifecycleScope.launch {
-            val summary = withContext(Dispatchers.IO) { graph.files.send(uris) }
-            graph.link.notify(summary.message(this@MainActivity))
+    private val filePicker =
+        registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+            if (uris.isEmpty()) return@registerForActivityResult
+            // Open the streams while this activity (and so the URI grant) is alive.
+            lifecycleScope.launch {
+                val summary = withContext(Dispatchers.IO) { graph.files.send(uris) }
+                graph.link.notify(summary.message(this@MainActivity))
+            }
         }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,16 +65,28 @@ class MainActivity : ComponentActivity() {
                 val style = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { dark }
                 enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
             }
+            var showSettings by rememberSaveable { mutableStateOf(false) }
             DroidLinkTheme(dark) {
-                MainScreen(
-                    graph = graph,
-                    onScan = ::launchScanner,
-                    onSendClipboard = ::sendClipboardNow,
-                    onPickFiles = { filePicker.launch(arrayOf("*/*")) },
-                    onOpenFile = ::openReceived,
-                )
+                if (showSettings) {
+                    SettingsScreen(graph.settings, onBack = { showSettings = false })
+                } else {
+                    MainScreen(
+                        graph = graph,
+                        onScan = ::launchScanner,
+                        onSendClipboard = ::sendClipboardNow,
+                        onPickFiles = { filePicker.launch(arrayOf("*/*")) },
+                        onOpenFile = ::openReceived,
+                        onOpenSettings = { showSettings = true },
+                    )
+                }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Coming back to the app is an explicit "try again" after the retries ran out.
+        graph.link.retryIfGaveUp()
     }
 
     private fun sendClipboardNow() {

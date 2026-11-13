@@ -24,6 +24,34 @@ enum class PcToPhoneMode { AUTO, HOTKEY, OFF }
 @Serializable
 enum class PhoneToPcMode { AUTO, MANUAL, OFF }
 
+/** Phone battery alerts shown on this PC. */
+@Serializable
+data class BatteryAlertSettings(
+    val lowEnabled: Boolean = true,
+    val lowThreshold: Int = DEFAULT_LOW_THRESHOLD,
+    val fullEnabled: Boolean = true,
+) {
+    /** The threshold in effect, or null when low-battery alerts are off. */
+    val effectiveLowThreshold: Int?
+        get() = if (lowEnabled) lowThreshold.coerceIn(MIN_LOW_THRESHOLD, MAX_LOW_THRESHOLD) else null
+
+    companion object {
+        const val DEFAULT_LOW_THRESHOLD = 20
+        const val MIN_LOW_THRESHOLD = 5
+        const val MAX_LOW_THRESHOLD = 50
+    }
+}
+
+/**
+ * Confirmation notifications that can be muted. Failures and prompts that need the user
+ * (no phone connected, enhanced mode required, ...) are always shown.
+ */
+@Serializable
+data class NotificationSettings(
+    val clipboard: Boolean = true,
+    val fileReceived: Boolean = true,
+)
+
 @Serializable
 data class DesktopSettings(
     val theme: ThemeMode = ThemeMode.SYSTEM,
@@ -31,6 +59,8 @@ data class DesktopSettings(
     val phoneToPc: PhoneToPcMode = PhoneToPcMode.MANUAL,
     val pushHotkey: Hotkey = Hotkey.DEFAULT_PUSH,
     val pullHotkey: Hotkey = Hotkey.DEFAULT_PULL,
+    val battery: BatteryAlertSettings = BatteryAlertSettings(),
+    val notifications: NotificationSettings = NotificationSettings(),
 )
 
 class SettingsStore(private val file: File) {

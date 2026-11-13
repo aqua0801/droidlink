@@ -10,13 +10,27 @@ import kotlinx.coroutines.flow.asStateFlow
 class PhoneSettings(context: Context) {
     private val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
 
-    private val _clipboardReceive = MutableStateFlow(prefs.getBoolean(KEY_CLIP_RECEIVE, true))
-    val clipboardReceive: StateFlow<Boolean> = _clipboardReceive.asStateFlow()
+    /** A boolean preference exposed as a flow. */
+    inner class Toggle(private val key: String, default: Boolean) {
+        private val state = MutableStateFlow(prefs.getBoolean(key, default))
+        val value: StateFlow<Boolean> = state.asStateFlow()
 
-    fun setClipboardReceive(enabled: Boolean) {
-        _clipboardReceive.value = enabled
-        prefs.edit { putBoolean(KEY_CLIP_RECEIVE, enabled) }
+        fun set(enabled: Boolean) {
+            state.value = enabled
+            prefs.edit { putBoolean(key, enabled) }
+        }
     }
+
+    val clipboardReceive = Toggle("clipboard_receive", true)
+
+    /** "已傳送" toast after sending text from the selection menu, share sheet or tile. */
+    val notifyClipboardSent = Toggle("notify_clipboard_sent", true)
+
+    /** Result toast after sharing files to DroidLink from another app. */
+    val notifyFilesSent = Toggle("notify_files_sent", true)
+
+    /** System notification when a file from the PC has been saved. */
+    val notifyFileReceived = Toggle("notify_file_received", true)
 
     private val _theme = MutableStateFlow(ThemeMode.parse(prefs.getString(KEY_THEME, null)))
     val theme: StateFlow<ThemeMode> = _theme.asStateFlow()
@@ -27,7 +41,6 @@ class PhoneSettings(context: Context) {
     }
 
     private companion object {
-        const val KEY_CLIP_RECEIVE = "clipboard_receive"
         const val KEY_THEME = "theme"
     }
 }

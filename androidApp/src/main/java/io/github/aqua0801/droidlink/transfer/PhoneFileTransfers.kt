@@ -33,6 +33,9 @@ class PhoneFileTransfers(private val context: Context, private val graph: AppGra
     private val openStreams = ConcurrentHashMap<Long, InputStream>()
 
     data class SendSummary(val started: Int, val unreadable: Int, val notConnected: Boolean) {
+        /** Everything was queued; nothing for the user to act on. */
+        val allStarted: Boolean get() = !notConnected && started > 0 && unreadable == 0
+
         fun message(context: Context): String = when {
             notConnected -> context.getString(R.string.files_not_connected)
             started == 0 -> context.getString(R.string.files_unreadable_all)
@@ -46,7 +49,11 @@ class PhoneFileTransfers(private val context: Context, private val graph: AppGra
         graph.scope.launch {
             engine.finished.collect { t ->
                 openStreams.remove(t.id)?.let { runCatching { it.close() } }
-                if (t.direction == Direction.RECEIVE && t.status == TransferStatus.DONE) notifyReceived(t)
+                if (t.direction == Direction.RECEIVE && t.status == TransferStatus.DONE &&
+                    graph.settings.notifyFileReceived.value.value
+                ) {
+                    notifyReceived(t)
+                }
             }
         }
     }

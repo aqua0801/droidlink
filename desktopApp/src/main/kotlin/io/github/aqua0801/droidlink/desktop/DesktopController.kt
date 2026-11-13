@@ -6,8 +6,6 @@ import io.github.aqua0801.droidlink.desktop.net.MdnsAdvertiser
 import io.github.aqua0801.droidlink.desktop.net.NetworkInfo
 import io.github.aqua0801.droidlink.desktop.platform.TrayNotifier
 import io.github.aqua0801.droidlink.desktop.resources.Res
-import io.github.aqua0801.droidlink.desktop.resources.notify_critical_body
-import io.github.aqua0801.droidlink.desktop.resources.notify_critical_title
 import io.github.aqua0801.droidlink.desktop.resources.notify_full_body
 import io.github.aqua0801.droidlink.desktop.resources.notify_full_title
 import io.github.aqua0801.droidlink.desktop.resources.notify_low_body
@@ -114,7 +112,9 @@ class DesktopController(
         agent.startScanning()
         scope.launch {
             files.finished.collect { t ->
-                if (t.direction == Direction.RECEIVE && t.status == TransferStatus.DONE) {
+                if (t.direction == Direction.RECEIVE && t.status == TransferStatus.DONE &&
+                    settings.settings.value.notifications.fileReceived
+                ) {
                     notifier.notify(getString(Res.string.notify_received_title), getString(Res.string.notify_received_body, t.name, t.peerName))
                 }
             }
@@ -245,12 +245,15 @@ class DesktopController(
     private suspend fun onBattery(fingerprint: Fingerprint, name: String, status: BatteryStatus) {
         _devices.update { list -> list.map { if (it.fingerprint == fingerprint) it.copy(battery = status) else it } }
         val policy = batteryAlerts.getOrPut(fingerprint) { BatteryAlertPolicy() }
+        val prefs = settings.settings.value.battery
         val level = "${status.level}%"
-        for (alert in policy.evaluate(status)) {
+        for (alert in policy.evaluate(status, prefs.effectiveLowThreshold)) {
             val (title, body) = when (alert) {
-                BatteryAlertPolicy.Alert.FULL -> Res.string.notify_full_title to Res.string.notify_full_body
+                BatteryAlertPolicy.Alert.FULL -> {
+                    if (!prefs.fullEnabled) continue
+                    Res.string.notify_full_title to Res.string.notify_full_body
+                }
                 BatteryAlertPolicy.Alert.LOW -> Res.string.notify_low_title to Res.string.notify_low_body
-                BatteryAlertPolicy.Alert.CRITICAL -> Res.string.notify_critical_title to Res.string.notify_critical_body
             }
             notifier.notify(getString(title, name), getString(body, level))
         }

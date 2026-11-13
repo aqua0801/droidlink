@@ -55,6 +55,8 @@ class ClipboardSendActivity : ComponentActivity() {
         val app = applicationContext
         app.graph.scope.launch {
             val result = app.graph.clipboard.send(text)
+            // Failures always show; the success toast can be turned off in settings.
+            if (result == ClipboardBridge.SendResult.SENT && !app.graph.settings.notifyClipboardSent.value.value) return@launch
             withContext(Dispatchers.Main) {
                 Toast.makeText(app, result.message, Toast.LENGTH_SHORT).show()
             }

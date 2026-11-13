@@ -6,44 +6,33 @@ import io.github.aqua0801.droidlink.shared.protocol.PowerSource
 /**
  * Turns a stream of battery updates into one-shot alerts.
  * Each alert fires once and re-arms only when the condition clears
- * (unplugged for FULL, plugged in for LOW/CRITICAL).
+ * (unplugged for FULL, plugged in for LOW).
  */
-class BatteryAlertPolicy(
-    private val lowThreshold: Int = 20,
-    private val criticalThreshold: Int = 10,
-) {
-    enum class Alert { FULL, LOW, CRITICAL }
+class BatteryAlertPolicy {
+    enum class Alert { FULL, LOW }
 
     private var fullNotified = false
     private var lowNotified = false
-    private var criticalNotified = false
 
+    /** [lowThreshold] null disables the low alert; the threshold is read on every update. */
     @Synchronized
-    fun evaluate(status: BatteryStatus): List<Alert> {
+    fun evaluate(status: BatteryStatus, lowThreshold: Int?): List<Alert> {
         if (status.level < 0) return emptyList()
-        val alerts = mutableListOf<Alert>()
         val onPower = status.plugged != PowerSource.NONE
 
         if (onPower) {
             lowNotified = false
-            criticalNotified = false
             if ((status.full || status.level >= 100) && !fullNotified) {
                 fullNotified = true
-                alerts += Alert.FULL
+                return listOf(Alert.FULL)
             }
         } else {
             fullNotified = false
-            if (status.level <= criticalThreshold) {
-                if (!criticalNotified) {
-                    criticalNotified = true
-                    lowNotified = true
-                    alerts += Alert.CRITICAL
-                }
-            } else if (status.level <= lowThreshold && !lowNotified) {
+            if (lowThreshold != null && status.level <= lowThreshold && !lowNotified) {
                 lowNotified = true
-                alerts += Alert.LOW
+                return listOf(Alert.LOW)
             }
         }
-        return alerts
+        return emptyList()
     }
 }

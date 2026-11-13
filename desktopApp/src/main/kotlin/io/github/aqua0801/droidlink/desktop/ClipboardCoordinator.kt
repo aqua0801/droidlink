@@ -139,7 +139,7 @@ class ClipboardCoordinator(
                 val text = sync.currentText() ?: return notify(Res.string.clip_pc_empty)
                 if (deliver(text, force = true)) {
                     sync.recordSent(text)
-                    notify(Res.string.clip_pushed, preview(text))
+                    confirm(Res.string.clip_pushed, preview(text))
                 } else {
                     notify(Res.string.clip_no_phone)
                 }
@@ -155,7 +155,12 @@ class ClipboardCoordinator(
     private suspend fun onPulled(text: String) {
         if (text.isEmpty()) return notify(Res.string.clip_phone_empty)
         sync.applyRemote(text)
-        notify(Res.string.clip_pulled, preview(text))
+        confirm(Res.string.clip_pulled, preview(text))
+    }
+
+    /** A success message the user can mute; failures go through [notify] and always show. */
+    private suspend fun confirm(title: StringResource, body: String) {
+        if (settings.settings.value.notifications.clipboard) notify(title, body)
     }
 
     private suspend fun notify(title: StringResource, body: String = "") {

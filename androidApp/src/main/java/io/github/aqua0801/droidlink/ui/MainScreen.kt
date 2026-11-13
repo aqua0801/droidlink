@@ -24,7 +24,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -37,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -65,6 +67,7 @@ fun MainScreen(
     onSendClipboard: () -> Unit,
     onPickFiles: () -> Unit,
     onOpenFile: (Transfer) -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
     val state by graph.link.state.collectAsStateWithLifecycle()
     val pcs by graph.pairedPcs.pcs.collectAsStateWithLifecycle()
@@ -93,9 +96,12 @@ fun MainScreen(
                         modifier = Modifier.weight(1f),
                     )
                     ThemeMenuButton(graph.settings)
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(painterResource(R.drawable.ic_settings), contentDescription = stringResource(R.string.settings_title))
+                    }
                 }
             }
-            item { StatusCard(state, onDisconnect = graph.link::disconnect) }
+            item { StatusCard(state, onRetry = graph.link::retryIfGaveUp, onDisconnect = graph.link::disconnect) }
             item {
                 Button(onClick = onScan, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.action_scan)) }
             }
@@ -153,7 +159,7 @@ fun MainScreen(
 }
 
 @Composable
-private fun StatusCard(state: LinkState, onDisconnect: () -> Unit) {
+private fun StatusCard(state: LinkState, onRetry: () -> Unit, onDisconnect: () -> Unit) {
     val connected = state is LinkState.Connected
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -179,7 +185,14 @@ private fun StatusCard(state: LinkState, onDisconnect: () -> Unit) {
                         Title(stringResource(R.string.status_connected, state.pcName))
                         Detail(stringResource(R.string.status_connected_via, state.host))
                     }
+                    is LinkState.Disconnected -> {
+                        Title(stringResource(R.string.status_gave_up, state.pcName))
+                        Detail(state.lastError ?: stringResource(R.string.status_gave_up_hint))
+                    }
                 }
+            }
+            if (state is LinkState.Disconnected) {
+                TextButton(onClick = onRetry) { Text(stringResource(R.string.action_reconnect)) }
             }
             if (state !is LinkState.Idle) {
                 TextButton(onClick = onDisconnect) { Text(stringResource(R.string.action_disconnect)) }
@@ -197,27 +210,17 @@ private fun Detail(text: String) =
 
 @Composable
 private fun ClipboardCard(graph: AppGraph, connected: Boolean, onSendNow: () -> Unit) {
-    val receive by graph.settings.clipboardReceive.collectAsStateWithLifecycle()
     val lastSent by graph.clipboard.lastSent.collectAsStateWithLifecycle()
     val lastReceived by graph.clipboard.lastReceived.collectAsStateWithLifecycle()
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Title(stringResource(R.string.section_clipboard))
-            SwitchRow(stringResource(R.string.clip_receive), receive, graph.settings::setClipboardReceive)
             lastSent?.let { ClipLine(R.string.clip_last_sent, it) }
             lastReceived?.let { ClipLine(R.string.clip_last_received, it) }
             OutlinedButton(onClick = onSendNow, enabled = connected) { Text(stringResource(R.string.clip_send_now)) }
             Detail(stringResource(R.string.clip_hint))
         }
-    }
-}
-
-@Composable
-private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-        Switch(checked = checked, onCheckedChange = onChange)
     }
 }
 

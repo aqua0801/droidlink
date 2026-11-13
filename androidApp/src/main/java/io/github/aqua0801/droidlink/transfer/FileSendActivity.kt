@@ -31,7 +31,9 @@ class FileSendActivity : ComponentActivity() {
         }
         lifecycleScope.launch {
             val summary = withContext(Dispatchers.IO) { graph.files.send(uris) }
-            Toast.makeText(applicationContext, summary.message(applicationContext), Toast.LENGTH_SHORT).show()
+            if (!summary.allStarted || graph.settings.notifyFilesSent.value.value) {
+                Toast.makeText(applicationContext, summary.message(applicationContext), Toast.LENGTH_SHORT).show()
+            }
             finish()
         }
     }

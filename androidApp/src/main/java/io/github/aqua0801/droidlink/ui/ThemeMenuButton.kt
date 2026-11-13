@@ -30,7 +30,7 @@ private val ThemeMode.icon: Int
     }
 
 @get:StringRes
-private val ThemeMode.label: Int
+internal val ThemeMode.label: Int
     get() = when (this) {
         ThemeMode.SYSTEM -> R.string.theme_system
         ThemeMode.LIGHT -> R.string.theme_light

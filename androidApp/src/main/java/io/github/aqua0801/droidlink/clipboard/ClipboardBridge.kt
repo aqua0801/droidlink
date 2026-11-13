@@ -40,7 +40,7 @@ class ClipboardBridge(private val context: Context, private val graph: AppGraph)
     val lastReceived: StateFlow<ClipEvent?> = _lastReceived.asStateFlow()
 
     suspend fun applyRemote(text: String) {
-        if (!graph.settings.clipboardReceive.value) return
+        if (!graph.settings.clipboardReceive.value.value) return
         withContext(Dispatchers.Main) {
             manager.setPrimaryClip(ClipData.newPlainText("DroidLink", text))
         }

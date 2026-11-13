@@ -49,8 +49,6 @@
     <string name="notify_full_body">電量 %1$s，可以拔掉充電器了</string>
     <string name="notify_low_title">%1$s 電量偏低</string>
     <string name="notify_low_body">剩下 %1$s</string>
-    <string name="notify_critical_title">%1$s 電量極低</string>
-    <string name="notify_critical_body">只剩 %1$s，請盡快充電</string>
 
     <string name="section_enhanced">ADB 增強模式</string>
     <string name="enhanced_intro">透過 ADB 在手機上以 shell 身分執行輔助程式，解鎖背景即時剪貼簿、靜默安裝 APK、完整系統紀錄。需要先在手機開啟 USB 或無線偵錯並授權這台電腦。</string>
@@ -143,6 +141,17 @@
     <string name="hotkey_conflict">這組按鍵已被其他程式占用，請換一組。</string>
     <string name="hotkey_unsupported">此系統暫不支援全域快捷鍵。</string>
     <string name="hotkey_inactive">選擇上方對應的模式後才會啟用。</string>
+    <string name="settings_battery">手機電量提醒</string>
+    <string name="alert_battery_low">低電量提醒</string>
+    <string name="alert_battery_low_threshold">手機未充電且電量降到 %1$s 以下時提醒</string>
+    <string name="alert_battery_full">充飽電提醒</string>
+    <string name="alert_battery_full_desc">充電中達到 100% 時提醒一次</string>
+    <string name="settings_notifications">通知</string>
+    <string name="notify_clipboard">剪貼簿快捷鍵結果</string>
+    <string name="notify_clipboard_desc">推送或拉取成功時顯示通知</string>
+    <string name="notify_file_received">收到檔案通知</string>
+    <string name="notify_file_received_desc">手機傳來的檔案存好後顯示通知</string>
+    <string name="notify_errors_hint">失敗或需要處理的提示（例如手機未連線、需要增強模式）一律會顯示。</string>
     <string name="settings_files">檔案</string>
     <string name="settings_downloads">收到的檔案存放位置</string>
 
