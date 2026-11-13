@@ -3,6 +3,7 @@ package io.github.aqua0801.droidlink.desktop
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -23,6 +24,7 @@ import io.github.aqua0801.droidlink.desktop.resources.tray_show
 import io.github.aqua0801.droidlink.desktop.ui.AppIcon
 import io.github.aqua0801.droidlink.desktop.ui.DroidLinkDesktopTheme
 import io.github.aqua0801.droidlink.desktop.ui.MainScreen
+import io.github.aqua0801.droidlink.desktop.ui.ScreenshotPopup
 import io.github.aqua0801.droidlink.desktop.ui.SettingsScreen
 import io.github.aqua0801.droidlink.desktop.ui.isDarkTheme
 import kotlinx.coroutines.CoroutineScope
@@ -66,6 +68,13 @@ fun main() {
                     Item(stringResource(Res.string.tray_quit), onClick = quit)
                 },
             )
+        }
+
+        val shot by controller.screenshot.collectAsState()
+        shot?.let { notice ->
+            key(notice.id) {
+                ScreenshotPopup(notice, dark, onDismiss = { controller.dismissScreenshot(notice.id) })
+            }
         }
 
         Window(

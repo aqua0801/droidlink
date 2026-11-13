@@ -8,6 +8,7 @@ import io.github.aqua0801.droidlink.shared.link.LinkSession
 import io.github.aqua0801.droidlink.shared.link.PeerTrust
 import io.github.aqua0801.droidlink.shared.link.SessionListener
 import io.github.aqua0801.droidlink.shared.pairing.PairingTokens
+import io.github.aqua0801.droidlink.shared.protocol.FileKind
 import io.github.aqua0801.droidlink.shared.protocol.TransferError
 import io.github.aqua0801.droidlink.shared.transfer.Direction
 import io.github.aqua0801.droidlink.shared.transfer.FileNames
@@ -42,9 +43,11 @@ class FileTransferTest {
     private class MemoryIncoming(private val decline: Boolean = false) : IncomingFiles {
         val committed = ConcurrentHashMap<String, ByteArray>()
         val aborted = ConcurrentHashMap.newKeySet<String>()
+        val kinds = ConcurrentHashMap<String, FileKind>()
 
-        override fun open(name: String, size: Long, mime: String?): FileSink {
+        override fun open(name: String, size: Long, mime: String?, kind: FileKind): FileSink {
             if (decline) throw IllegalStateException("no space")
+            kinds[name] = kind
             val buffer = ByteArrayOutputStream()
             return object : FileSink {
                 override val output = buffer
@@ -112,6 +115,25 @@ class FileTransferTest {
 
     private fun source(name: String, data: ByteArray) =
         FileSource(name, data.size.toLong(), "application/octet-stream") { ByteArrayInputStream(data) }
+
+    @Test
+    fun kindReachesTheReceiver() {
+        val pcIn = MemoryIncoming()
+        connect(pcIn, MemoryIncoming()) {
+            val data = bytes(2_000)
+            val shot = phoneFiles.send(
+                phoneSession,
+                FileSource("Screenshot_1.png", data.size.toLong(), "image/png", FileKind.SCREENSHOT) { ByteArrayInputStream(data) },
+            )
+            val plain = phoneFiles.send(phoneSession, source("notes.txt", bytes(10)))
+            val received = pcFiles.awaitFinished(shot)
+            assertEquals(TransferStatus.DONE, received.status)
+            assertEquals(FileKind.SCREENSHOT, received.kind)
+            assertEquals(FileKind.SCREENSHOT, pcIn.kinds["Screenshot_1.png"])
+            assertEquals(FileKind.FILE, pcFiles.awaitFinished(plain).kind)
+            assertEquals(FileKind.FILE, pcIn.kinds["notes.txt"])
+        }
+    }
 
     @Test
     fun sendsBothDirectionsAndVerifies() {

@@ -29,6 +29,9 @@ class PhoneSettings(context: Context) {
     /** Result toast after sharing files to DroidLink from another app. */
     val notifyFilesSent = Toggle("notify_files_sent", true)
 
+    /** Send each new screenshot to the connected PC (needs image read access). */
+    val sendScreenshots = Toggle("send_screenshots", true)
+
     /** System notification when a file from the PC has been saved. */
     val notifyFileReceived = Toggle("notify_file_received", true)
 

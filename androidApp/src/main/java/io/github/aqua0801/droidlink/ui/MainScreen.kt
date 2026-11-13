@@ -106,6 +106,7 @@ fun MainScreen(
                 Button(onClick = onScan, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.action_scan)) }
             }
             item { BatteryOptimizationCard() }
+            item { ScreenshotAccessCard(graph.settings.sendScreenshots) }
             item { ClipboardCard(graph, connected = state is LinkState.Connected, onSendNow = onSendClipboard) }
             item { FilesCard(graph, connected = state is LinkState.Connected, onPick = onPickFiles, onOpen = onOpenFile) }
             item {

@@ -151,6 +151,15 @@
     <string name="notify_clipboard_desc">推送或拉取成功時顯示通知</string>
     <string name="notify_file_received">收到檔案通知</string>
     <string name="notify_file_received_desc">手機傳來的檔案存好後顯示通知</string>
+    <string name="notify_screenshot">手機截圖預覽</string>
+    <string name="notify_screenshot_desc">手機傳來截圖時在右下角顯示預覽，可複製或開啟（截圖存在下載資料夾的 Screenshots）</string>
+    <string name="shot_title">%1$s 的截圖</string>
+    <string name="shot_copy">複製</string>
+    <string name="shot_copied">已複製</string>
+    <string name="shot_copy_failed">無法複製</string>
+    <string name="shot_open">開啟</string>
+    <string name="shot_reveal">在資料夾中顯示</string>
+    <string name="shot_close">關閉</string>
     <string name="notify_errors_hint">失敗或需要處理的提示（例如手機未連線、需要增強模式）一律會顯示。</string>
     <string name="settings_files">檔案</string>
     <string name="settings_downloads">收到的檔案存放位置</string>

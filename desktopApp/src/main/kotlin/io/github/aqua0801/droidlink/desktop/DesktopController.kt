@@ -29,6 +29,7 @@ import io.github.aqua0801.droidlink.shared.pairing.PairingInfo
 import io.github.aqua0801.droidlink.shared.pairing.PairingTokens
 import io.github.aqua0801.droidlink.shared.protocol.BatteryStatus
 import io.github.aqua0801.droidlink.shared.protocol.ClipboardText
+import io.github.aqua0801.droidlink.shared.protocol.FileKind
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -60,6 +61,9 @@ data class ConnectedDevice(
 
 class PairingOffer(val info: PairingInfo, val qr: ImageBitmap, val expiresAt: Long)
 
+/** A screenshot the phone just sent, shown in the preview popup. */
+data class ScreenshotNotice(val id: Long, val file: File, val peerName: String, val receivedAt: Long)
+
 /** Why files dropped on the window were not sent. */
 enum class DropNotice { NO_DEVICE, MULTIPLE_DEVICES }
 
@@ -90,6 +94,14 @@ class DesktopController(
     val downloadsDir: File get() = paths.downloadsDir
     val files = FileTransfers(scope, DesktopIncomingFiles(paths.downloadsDir))
 
+    private val _screenshot = MutableStateFlow<ScreenshotNotice?>(null)
+    /** The latest screenshot to preview; a newer one replaces it. */
+    val screenshot: StateFlow<ScreenshotNotice?> = _screenshot.asStateFlow()
+
+    fun dismissScreenshot(id: Long) {
+        _screenshot.update { if (it?.id == id) null else it }
+    }
+
     private val _dropNotice = MutableStateFlow<DropNotice?>(null)
     val dropNotice: StateFlow<DropNotice?> = _dropNotice.asStateFlow()
     private var dropNoticeJob: Job? = null
@@ -112,9 +124,14 @@ class DesktopController(
         agent.startScanning()
         scope.launch {
             files.finished.collect { t ->
-                if (t.direction == Direction.RECEIVE && t.status == TransferStatus.DONE &&
-                    settings.settings.value.notifications.fileReceived
-                ) {
+                if (t.direction != Direction.RECEIVE || t.status != TransferStatus.DONE) return@collect
+                val notifications = settings.settings.value.notifications
+                if (t.kind == FileKind.SCREENSHOT) {
+                    val file = t.location?.let(::File)
+                    if (notifications.screenshot && file != null) {
+                        _screenshot.value = ScreenshotNotice(t.id, file, t.peerName, System.currentTimeMillis())
+                    }
+                } else if (notifications.fileReceived) {
                     notifier.notify(getString(Res.string.notify_received_title), getString(Res.string.notify_received_body, t.name, t.peerName))
                 }
             }

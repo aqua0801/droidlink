@@ -86,7 +86,18 @@ data class ClipboardText(val text: String) : Message()
 /** Sender proposes a file. Data follows as FILE_CHUNK frames once accepted. */
 @Serializable
 @SerialName("file.offer")
-data class FileOffer(val id: Long, val name: String, val size: Long, val mime: String? = null) : Message()
+data class FileOffer(
+    val id: Long,
+    val name: String,
+    val size: Long,
+    val mime: String? = null,
+    /** Omitted on the wire for ordinary files, so older peers still understand the offer. */
+    val kind: FileKind = FileKind.FILE,
+) : Message()
+
+/** Why a file is being sent; the receiver may store or present it differently. */
+@Serializable
+enum class FileKind { FILE, SCREENSHOT }
 
 @Serializable
 @SerialName("file.accept")

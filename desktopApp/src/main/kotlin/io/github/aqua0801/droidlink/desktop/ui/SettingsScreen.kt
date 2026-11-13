@@ -143,6 +143,9 @@ fun SettingsScreen(controller: DesktopController, onBack: () -> Unit) {
                 SwitchOption(n.fileReceived, Res.string.notify_file_received, Res.string.notify_file_received_desc) { on ->
                     update { it.copy(notifications = it.notifications.copy(fileReceived = on)) }
                 }
+                SwitchOption(n.screenshot, Res.string.notify_screenshot, Res.string.notify_screenshot_desc) { on ->
+                    update { it.copy(notifications = it.notifications.copy(screenshot = on)) }
+                }
                 Text(
                     stringResource(Res.string.notify_errors_hint),
                     style = MaterialTheme.typography.bodySmall,

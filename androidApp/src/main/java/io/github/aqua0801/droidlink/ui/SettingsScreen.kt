@@ -69,6 +69,11 @@ fun SettingsScreen(settings: PhoneSettings, onBack: () -> Unit) {
                 ToggleRow(settings.clipboardReceive, R.string.clip_receive, R.string.clip_receive_desc)
             }
 
+            Section(R.string.section_screenshot) {
+                ToggleRow(settings.sendScreenshots, R.string.screenshot_send, R.string.screenshot_send_desc)
+                ScreenshotAccessStatus(settings.sendScreenshots)
+            }
+
             Section(R.string.settings_notifications) {
                 ToggleRow(settings.notifyClipboardSent, R.string.notify_clip_sent, R.string.notify_clip_sent_desc)
                 ToggleRow(settings.notifyFilesSent, R.string.notify_files_sent, R.string.notify_files_sent_desc)

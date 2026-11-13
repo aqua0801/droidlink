@@ -6,6 +6,7 @@ import android.os.Environment
 import android.os.storage.StorageManager
 import android.provider.MediaStore
 import android.webkit.MimeTypeMap
+import io.github.aqua0801.droidlink.shared.protocol.FileKind
 import io.github.aqua0801.droidlink.shared.transfer.FileSink
 import io.github.aqua0801.droidlink.shared.transfer.IncomingFiles
 import java.io.BufferedOutputStream
@@ -17,7 +18,7 @@ import java.io.IOException
  * MediaStore picks a unique name if one already exists.
  */
 class MediaStoreIncomingFiles(private val context: Context) : IncomingFiles {
-    override fun open(name: String, size: Long, mime: String?): FileSink {
+    override fun open(name: String, size: Long, mime: String?, kind: FileKind): FileSink {
         // Allocatable bytes include cache the system can clear; 0 if unknown (then don't block).
         val storage = context.getSystemService(StorageManager::class.java)
         val free = context.getExternalFilesDir(null)

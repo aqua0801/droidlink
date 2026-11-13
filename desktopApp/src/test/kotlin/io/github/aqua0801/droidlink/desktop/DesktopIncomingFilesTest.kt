@@ -1,6 +1,7 @@
 package io.github.aqua0801.droidlink.desktop
 
 import io.github.aqua0801.droidlink.desktop.transfer.DesktopIncomingFiles
+import io.github.aqua0801.droidlink.shared.protocol.FileKind
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.Test
@@ -34,5 +35,15 @@ class DesktopIncomingFilesTest {
         sink.output.write(ByteArray(5))
         sink.abort()
         assertFalse(dir.listFiles()!!.any())
+    }
+
+    @Test
+    fun screenshotsGoToTheirOwnFolder() {
+        val dir = tempDir()
+        val sink = DesktopIncomingFiles(dir).open("Screenshot_1.png", 3, "image/png", FileKind.SCREENSHOT)
+        sink.output.write(ByteArray(3))
+        val path = sink.commit()
+        assertEquals(File(File(dir, DesktopIncomingFiles.SCREENSHOTS), "Screenshot_1.png").absolutePath, path)
+        assertFalse(File(dir, DesktopIncomingFiles.SCREENSHOTS).listFiles()!!.any { it.name.endsWith(".part") })
     }
 }

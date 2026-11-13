@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- Screenshot forwarding needs full image access; see the READ_MEDIA_IMAGES comment in
+         AndroidManifest.xml for why partial (user-selected) access is not declared. -->
+    <issue id="SelectedPhotoAccess" severity="ignore" />
+</lint>

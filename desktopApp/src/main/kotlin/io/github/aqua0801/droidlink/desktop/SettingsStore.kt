@@ -50,6 +50,8 @@ data class BatteryAlertSettings(
 data class NotificationSettings(
     val clipboard: Boolean = true,
     val fileReceived: Boolean = true,
+    /** Preview popup for screenshots sent by the phone. */
+    val screenshot: Boolean = true,
 )
 
 @Serializable

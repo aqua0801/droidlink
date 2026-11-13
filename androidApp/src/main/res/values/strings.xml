@@ -125,4 +125,16 @@
     <string name="notify_file_received">收到檔案通知</string>
     <string name="notify_file_received_desc">電腦傳來的檔案存好後，跳出通知可直接開啟</string>
     <string name="notify_errors_hint">失敗或需要處理的提示（例如尚未連線）一律會顯示。</string>
+
+    <!-- Screenshots -->
+    <string name="section_screenshot">截圖</string>
+    <string name="screenshot_send">截圖自動傳到電腦</string>
+    <string name="screenshot_send_desc">連線中截圖時，自動把截圖傳給電腦，電腦會跳出預覽</string>
+    <string name="screenshot_access_title">截圖傳送需要相片權限</string>
+    <string name="screenshot_access_body">用來偵測新的截圖。請選「全部允許」；只允許部分相片時偵測不到新截圖。</string>
+    <string name="screenshot_access_denied">權限被拒絕了，請到系統設定的「權限」開啟相片與影片存取。</string>
+    <string name="screenshot_access_missing">尚未取得相片權限，截圖不會傳送</string>
+    <string name="action_allow">允許</string>
+    <string name="action_open_system_settings">前往系統設定</string>
+    <string name="action_turn_off">關閉此功能</string>
 </resources>

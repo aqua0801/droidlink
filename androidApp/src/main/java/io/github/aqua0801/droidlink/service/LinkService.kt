@@ -29,7 +29,8 @@ import java.io.IOException
 
 /**
  * Keeps the process alive while linked (vivo/OriginOS kills background apps aggressively)
- * and hosts the features that run while the UI is closed. For now: battery reporting.
+ * and hosts the features that run while the UI is closed: battery reporting and
+ * screenshot forwarding.
  */
 class LinkService : LifecycleService() {
     private val battery = MutableStateFlow<BatteryStatus?>(null)
@@ -58,6 +59,7 @@ class LinkService : LifecycleService() {
         )?.let { sticky -> battery.value = sticky.toBatteryStatus() }
 
         graph.nsd.start()
+        graph.screenshots.start(lifecycleScope)
 
         lifecycleScope.launch {
             graph.link.state.collect { state ->
@@ -95,6 +97,7 @@ class LinkService : LifecycleService() {
     override fun onDestroy() {
         runCatching { unregisterReceiver(batteryReceiver) }
         graph.nsd.stop()
+        graph.screenshots.stop()
         super.onDestroy()
     }
 

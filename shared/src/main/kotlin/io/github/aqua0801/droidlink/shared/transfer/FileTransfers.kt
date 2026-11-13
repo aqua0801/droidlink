@@ -109,7 +109,7 @@ class FileTransfers(
         val id = newId()
         val out = Outgoing(session)
         outgoing[id] = out
-        add(Transfer(id, Direction.SEND, source.name, source.size, 0, TransferStatus.WAITING, session.peerName))
+        add(Transfer(id, Direction.SEND, source.name, source.size, 0, TransferStatus.WAITING, session.peerName, kind = source.kind))
 
         scope.launch(Dispatchers.IO) {
             val error = try {
@@ -128,7 +128,7 @@ class FileTransfers(
     }
 
     private suspend fun runSend(id: Long, out: Outgoing, session: LinkSession, source: FileSource): TransferError? {
-        session.send(FileOffer(id, source.name, source.size, source.mime))
+        session.send(FileOffer(id, source.name, source.size, source.mime, source.kind))
         val answer = withTimeoutOrNull(DroidLinkDefaults.FILE_RESPONSE_TIMEOUT_MS) { out.accepted.await() }
             ?: return abortSend(id, session, TransferError.TIMEOUT)
         answer.error?.let { return it }
@@ -172,15 +172,15 @@ class FileTransfers(
         val name = FileNames.sanitize(offer.name)
         val sink = try {
             if (offer.size < 0) throw IOException("negative size")
-            incoming.open(name, offer.size, offer.mime)
+            incoming.open(name, offer.size, offer.mime, offer.kind)
         } catch (e: Exception) {
-            add(Transfer(offer.id, Direction.RECEIVE, name, offer.size, 0, TransferStatus.FAILED, session.peerName, TransferError.STORAGE))
+            add(Transfer(offer.id, Direction.RECEIVE, name, offer.size, 0, TransferStatus.FAILED, session.peerName, TransferError.STORAGE, kind = offer.kind))
             _transfers.value.firstOrNull { it.id == offer.id }?.let { _finished.tryEmit(it) }
             runCatching { session.send(FileReject(offer.id, TransferError.STORAGE)) }
             return
         }
         receiving[offer.id] = Receiving(session, sink, offer.size)
-        add(Transfer(offer.id, Direction.RECEIVE, name, offer.size, 0, TransferStatus.ACTIVE, session.peerName))
+        add(Transfer(offer.id, Direction.RECEIVE, name, offer.size, 0, TransferStatus.ACTIVE, session.peerName, kind = offer.kind))
         try {
             session.send(FileAccept(offer.id))
         } catch (_: IOException) {
