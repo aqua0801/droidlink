@@ -24,7 +24,7 @@ import io.github.aqua0801.droidlink.R
 import io.github.aqua0801.droidlink.sync.DocEntry
 import io.github.aqua0801.droidlink.sync.SafTree
 
-/** Top bar shared by the viewers: back, name, optional subtitle, share and open-with. */
+/** Top bar shared by the viewers: back, name, optional subtitle, share, open-with and delete. */
 @Composable
 fun ViewerTopBar(
     tree: SafTree,
@@ -33,6 +33,7 @@ fun ViewerTopBar(
     visible: Boolean,
     onBack: () -> Unit,
     overMedia: Boolean,
+    onDelete: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val uri = tree.uri(entry.id)
@@ -57,6 +58,11 @@ fun ViewerTopBar(
             }
             IconButton(onClick = { openExternally(context, uri, entry.mime) }) {
                 Icon(painterResource(R.drawable.ic_open_in_new), stringResource(R.string.viewer_open_with), tint = content)
+            }
+            if (onDelete != null) {
+                IconButton(onClick = onDelete) {
+                    Icon(painterResource(R.drawable.ic_delete), stringResource(R.string.browser_delete), tint = content)
+                }
             }
         }
     }

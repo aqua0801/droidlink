@@ -73,7 +73,7 @@ private class PdfDocument(val fd: ParcelFileDescriptor) {
 }
 
 @Composable
-fun PdfViewer(tree: SafTree, entry: DocEntry, onBack: () -> Unit) {
+fun PdfViewer(tree: SafTree, entry: DocEntry, onBack: () -> Unit, onDelete: (DocEntry) -> Unit) {
     BackHandler(onBack = onBack)
     val context = LocalContext.current
     val doc by produceState<Result<PdfDocument>?>(null, entry.id) {
@@ -101,6 +101,7 @@ fun PdfViewer(tree: SafTree, entry: DocEntry, onBack: () -> Unit) {
             visible = true,
             onBack = onBack,
             overMedia = false,
+            onDelete = { onDelete(entry) },
         )
         val loaded = doc
         when {

@@ -36,7 +36,7 @@ import me.saket.telephoto.zoomable.coil3.ZoomableAsyncImage
  * the next page. Only the settled page's video plays.
  */
 @Composable
-fun MediaViewer(tree: SafTree, items: List<DocEntry>, start: Int, onBack: () -> Unit) {
+fun MediaViewer(tree: SafTree, items: List<DocEntry>, start: Int, onBack: () -> Unit, onDelete: (DocEntry) -> Unit) {
     BackHandler(onBack = onBack)
     val pager = rememberPagerState(initialPage = start.coerceIn(0, (items.size - 1).coerceAtLeast(0))) { items.size }
     var chrome by rememberSaveable { mutableStateOf(true) }
@@ -65,6 +65,7 @@ fun MediaViewer(tree: SafTree, items: List<DocEntry>, start: Int, onBack: () -> 
                 visible = chrome,
                 onBack = onBack,
                 overMedia = true,
+                onDelete = { onDelete(current) },
             )
         }
     }

@@ -1,10 +1,12 @@
 package io.github.aqua0801.droidlink.ui
 
 import android.text.format.Formatter
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,7 +23,9 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -33,6 +37,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -43,8 +49,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -65,8 +74,10 @@ import io.github.aqua0801.droidlink.ui.viewer.ViewKind
 import io.github.aqua0801.droidlink.ui.viewer.isGallery
 import io.github.aqua0801.droidlink.ui.viewer.openExternally
 import io.github.aqua0801.droidlink.ui.viewer.shareFile
+import io.github.aqua0801.droidlink.ui.viewer.shareFiles
 import io.github.aqua0801.droidlink.ui.viewer.viewKind
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.DateFormat
 import java.util.Date
@@ -81,9 +92,10 @@ private data class Crumb(val id: String, val name: String) {
 }
 
 /**
- * Read-only browser for the sync folder: breadcrumb trail, list or grid with thumbnails,
- * and in-app viewers for media, PDF and text. Other files open in another app.
- * Content changes only when the PC pushes.
+ * Browser for the sync folder: breadcrumb trail, list or grid with thumbnails, in-app
+ * viewers for media, PDF and text (other files open in another app), and long-press
+ * multi-select to share or delete. Deleted files come back on the next sync if the PC
+ * still has them.
  */
 @Composable
 fun FolderBrowserScreen(folder: PhoneSyncFolder, onBack: () -> Unit) {
@@ -94,6 +106,7 @@ fun FolderBrowserScreen(folder: PhoneSyncFolder, onBack: () -> Unit) {
         return
     }
     val context = LocalContext.current
+    val resources = LocalResources.current
     var trail by rememberSaveable { mutableStateOf("") }
     val crumbs = remember(trail) { trail.lines().filter { it.isNotEmpty() }.map(Crumb::decode) }
     fun setCrumbs(list: List<Crumb>) {
@@ -106,14 +119,27 @@ fun FolderBrowserScreen(folder: PhoneSyncFolder, onBack: () -> Unit) {
     val currentId = crumbs.lastOrNull()?.id ?: t.rootId
 
     val rootName by produceState("…", t) { value = withContext(Dispatchers.IO) { folder.folderName(t) } }
-    val entries by produceState<List<DocEntry>?>(null, t, currentId, refresh) {
-        value = null
-        value = withContext(Dispatchers.IO) {
+    // Reset to "loading" only when the folder changes; a refresh keeps showing the old list.
+    var entries by remember(t, currentId) { mutableStateOf<List<DocEntry>?>(null) }
+    LaunchedEffect(t, currentId, refresh) {
+        entries = withContext(Dispatchers.IO) {
             runCatching { t.children(currentId) }.getOrDefault(emptyList())
                 .filterNot { it.name.startsWith('.') }
                 .sortedWith(compareBy<DocEntry>({ !it.isDirectory }, { it.name.lowercase() }))
         }
     }
+
+    // Multi-select: ids saved as lines; cleared when the folder changes.
+    var selectedRaw by rememberSaveable(currentId) { mutableStateOf("") }
+    val selected = remember(selectedRaw) { selectedRaw.lines().filter { it.isNotEmpty() }.toSet() }
+    fun setSelected(ids: Set<String>) {
+        selectedRaw = ids.joinToString("\n")
+    }
+    val selecting = selected.isNotEmpty()
+    var pendingDelete by remember { mutableStateOf<List<DocEntry>>(emptyList()) }
+    /** File to show after a delete from the viewer (the neighbour in the gallery), or empty. */
+    var afterDelete by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
 
     val open: (DocEntry) -> Unit = { entry ->
         when {
@@ -122,16 +148,43 @@ fun FolderBrowserScreen(folder: PhoneSyncFolder, onBack: () -> Unit) {
             else -> viewing = entry.id
         }
     }
+    val click: (DocEntry) -> Unit = { entry ->
+        if (selecting) setSelected(if (entry.id in selected) selected - entry.id else selected + entry.id) else open(entry)
+    }
+    val longClick: (DocEntry) -> Unit = { entry -> setSelected(selected + entry.id) }
+    val deleteFromViewer: (DocEntry) -> Unit = { entry ->
+        val gallery = entries.orEmpty().filter { it.viewKind.isGallery }
+        val index = gallery.indexOfFirst { it.id == entry.id }
+        val neighbour = if (entry.viewKind.isGallery) gallery.getOrNull(index + 1) ?: gallery.getOrNull(index - 1) else null
+        afterDelete = neighbour?.id.orEmpty()
+        pendingDelete = listOf(entry)
+    }
 
     BackHandler {
-        if (crumbs.isNotEmpty()) setCrumbs(crumbs.dropLast(1)) else onBack()
+        when {
+            selecting -> setSelected(emptySet())
+            crumbs.isNotEmpty() -> setCrumbs(crumbs.dropLast(1))
+            else -> onBack()
+        }
     }
 
     // The list stays composed under the viewer so its scroll position survives.
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold { padding ->
             Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-                Row(modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (selecting) {
+                    SelectionBar(
+                        count = selected.size,
+                        onCancel = { setSelected(emptySet()) },
+                        onSelectAll = { setSelected(entries.orEmpty().map { it.id }.toSet()) },
+                        onShare = {
+                            val files = entries.orEmpty().filter { it.id in selected && !it.isDirectory }
+                            if (files.isNotEmpty()) shareFiles(context, files.map { t.uri(it.id) to it.mime })
+                        },
+                        canShare = entries.orEmpty().any { it.id in selected && !it.isDirectory },
+                        onDelete = { pendingDelete = entries.orEmpty().filter { it.id in selected } },
+                    )
+                } else Row(modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onBack) {
                         Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = stringResource(R.string.settings_back))
                     }
@@ -160,10 +213,14 @@ fun FolderBrowserScreen(folder: PhoneSyncFolder, onBack: () -> Unit) {
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        items(list, key = { it.id }) { entry -> GridCell(t, entry, onClick = { open(entry) }) }
+                        items(list, key = { it.id }) { entry ->
+                            GridCell(t, entry, selecting, entry.id in selected, onClick = { click(entry) }, onLongClick = { longClick(entry) })
+                        }
                     }
                     else -> LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        items(list, key = { it.id }) { entry -> EntryRow(t, entry, onClick = { open(entry) }) }
+                        items(list, key = { it.id }) { entry ->
+                            EntryRow(t, entry, selecting, entry.id in selected, onClick = { click(entry) }, onLongClick = { longClick(entry) })
+                        }
                     }
                 }
             }
@@ -175,15 +232,89 @@ fun FolderBrowserScreen(folder: PhoneSyncFolder, onBack: () -> Unit) {
             when (shown.viewKind) {
                 ViewKind.IMAGE, ViewKind.VIDEO -> {
                     val gallery = entries.orEmpty().filter { it.viewKind.isGallery }
-                    MediaViewer(t, gallery, gallery.indexOf(shown), onBack = close)
+                    // Keyed so a delete re-creates the pager at the neighbour instead of a stale page.
+                    key(gallery.size) { MediaViewer(t, gallery, gallery.indexOf(shown), onBack = close, onDelete = deleteFromViewer) }
                 }
-                ViewKind.AUDIO -> MediaViewer(t, listOf(shown), 0, onBack = close)
-                ViewKind.PDF -> PdfViewer(t, shown, onBack = close)
-                ViewKind.TEXT -> TextViewer(t, shown, onBack = close)
+                ViewKind.AUDIO -> MediaViewer(t, listOf(shown), 0, onBack = close, onDelete = deleteFromViewer)
+                ViewKind.PDF -> PdfViewer(t, shown, onBack = close, onDelete = deleteFromViewer)
+                ViewKind.TEXT -> TextViewer(t, shown, onBack = close, onDelete = deleteFromViewer)
                 ViewKind.OTHER -> Unit
             }
         }
     }
+
+    if (pendingDelete.isNotEmpty()) {
+        val targets = pendingDelete
+        AlertDialog(
+            onDismissRequest = { pendingDelete = emptyList() },
+            title = { Text(stringResource(R.string.browser_delete_title, targets.size)) },
+            text = { Text(stringResource(R.string.browser_delete_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingDelete = emptyList()
+                    scope.launch {
+                        val failed = withContext(Dispatchers.IO) { targets.count { !t.delete(it.id) } }
+                        if (failed > 0) {
+                            Toast.makeText(context, resources.getString(R.string.browser_delete_failed, failed), Toast.LENGTH_SHORT).show()
+                        }
+                        setSelected(emptySet())
+                        if (viewing.isNotEmpty() && targets.any { it.id == viewing }) viewing = afterDelete
+                        afterDelete = ""
+                        refresh++
+                    }
+                }) { Text(stringResource(R.string.browser_delete), color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDelete = emptyList() }) { Text(stringResource(R.string.action_cancel)) }
+            },
+        )
+    }
+}
+
+@Composable
+private fun SelectionBar(
+    count: Int,
+    onCancel: () -> Unit,
+    onSelectAll: () -> Unit,
+    onShare: () -> Unit,
+    canShare: Boolean,
+    onDelete: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.secondaryContainer)
+            .padding(horizontal = 4.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = onCancel) {
+            Icon(painterResource(R.drawable.ic_close), contentDescription = stringResource(R.string.browser_cancel_selection))
+        }
+        Text(
+            stringResource(R.string.browser_selected, count),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.weight(1f),
+        )
+        IconButton(onClick = onSelectAll) {
+            Icon(painterResource(R.drawable.ic_select_all), contentDescription = stringResource(R.string.browser_select_all))
+        }
+        IconButton(onClick = onShare, enabled = canShare) {
+            Icon(painterResource(R.drawable.ic_share), contentDescription = stringResource(R.string.browser_share))
+        }
+        IconButton(onClick = onDelete) {
+            Icon(painterResource(R.drawable.ic_delete), contentDescription = stringResource(R.string.browser_delete))
+        }
+    }
+}
+
+@Composable
+private fun SelectionMark(selected: Boolean, modifier: Modifier = Modifier) {
+    Icon(
+        painterResource(if (selected) R.drawable.ic_check_circle else R.drawable.ic_radio_button_unchecked),
+        contentDescription = null,
+        tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier,
+    )
 }
 
 @Composable
@@ -211,16 +342,32 @@ private fun Breadcrumbs(rootName: String, crumbs: List<Crumb>, onSelect: (depth:
 }
 
 @Composable
-private fun EntryRow(tree: SafTree, entry: DocEntry, onClick: () -> Unit) {
+private fun EntryRow(
+    tree: SafTree,
+    entry: DocEntry,
+    selecting: Boolean,
+    selected: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
     val context = LocalContext.current
+    val haptics = LocalHapticFeedback.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .background(if (selected) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f) else Color.Transparent)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onLongClick()
+                },
+            )
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
+        if (selecting) SelectionMark(selected, Modifier.size(24.dp))
         Thumbnail(tree, entry, size = 44.dp)
         Column(modifier = Modifier.weight(1f)) {
             Text(entry.name, style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -235,7 +382,7 @@ private fun EntryRow(tree: SafTree, entry: DocEntry, onClick: () -> Unit) {
                 )
             }
         }
-        if (!entry.isDirectory) {
+        if (!entry.isDirectory && !selecting) {
             IconButton(onClick = { shareFile(context, tree.uri(entry.id), entry.mime) }) {
                 Icon(painterResource(R.drawable.ic_share), contentDescription = stringResource(R.string.browser_share))
             }
@@ -244,14 +391,29 @@ private fun EntryRow(tree: SafTree, entry: DocEntry, onClick: () -> Unit) {
 }
 
 @Composable
-private fun GridCell(tree: SafTree, entry: DocEntry, onClick: () -> Unit) {
+private fun GridCell(
+    tree: SafTree,
+    entry: DocEntry,
+    selecting: Boolean,
+    selected: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
     val media = entry.viewKind.isGallery
+    val haptics = LocalHapticFeedback.current
     Box(
         modifier = Modifier
             .aspectRatio(1f)
             .clip(RoundedCornerShape(6.dp))
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-            .clickable(onClick = onClick),
+            .then(if (selected) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(6.dp)) else Modifier)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onLongClick()
+                },
+            ),
     ) {
         if (media) {
             Thumbnail(tree, entry, size = null)
@@ -276,6 +438,16 @@ private fun GridCell(tree: SafTree, entry: DocEntry, onClick: () -> Unit) {
                     modifier = Modifier.padding(top = 4.dp),
                 )
             }
+        }
+        if (selecting) {
+            SelectionMark(
+                selected,
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(6.dp)
+                    .size(24.dp)
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f), CircleShape),
+            )
         }
     }
 }

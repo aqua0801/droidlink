@@ -46,6 +46,19 @@ fun openExternally(context: Context, uri: Uri, mime: String) {
     }
 }
 
+/** Shares several files at once; falls back to a single share for one file. */
+fun shareFiles(context: Context, files: List<Pair<Uri, String>>) {
+    if (files.size == 1) return shareFile(context, files[0].first, files[0].second)
+    val uris = ArrayList(files.map { it.first })
+    val types = files.map { it.second }.distinct()
+    val send = Intent(Intent.ACTION_SEND_MULTIPLE)
+        .setType(if (types.size == 1) types[0] else "*/*")
+        .putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    send.clipData = ClipData.newRawUri(null, uris[0]).apply { uris.drop(1).forEach { addItem(ClipData.Item(it)) } }
+    context.startActivity(Intent.createChooser(send, null))
+}
+
 fun shareFile(context: Context, uri: Uri, mime: String) {
     val send = Intent(Intent.ACTION_SEND)
         .setType(mime)

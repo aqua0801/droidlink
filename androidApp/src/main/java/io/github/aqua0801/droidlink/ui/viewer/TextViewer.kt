@@ -35,7 +35,7 @@ private data class TextContent(val text: String, val truncated: Boolean)
 
 /** Plain-text and source viewer; lines are not wrapped so code keeps its shape. */
 @Composable
-fun TextViewer(tree: SafTree, entry: DocEntry, onBack: () -> Unit) {
+fun TextViewer(tree: SafTree, entry: DocEntry, onBack: () -> Unit, onDelete: (DocEntry) -> Unit) {
     BackHandler(onBack = onBack)
     val context = LocalContext.current
     val content by produceState<Result<TextContent>?>(null, entry.id) {
@@ -50,7 +50,7 @@ fun TextViewer(tree: SafTree, entry: DocEntry, onBack: () -> Unit) {
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Column {
-            ViewerTopBar(tree, entry, subtitle = null, visible = true, onBack = onBack, overMedia = false)
+            ViewerTopBar(tree, entry, subtitle = null, visible = true, onBack = onBack, overMedia = false, onDelete = { onDelete(entry) })
             val loaded = content
             when {
                 loaded == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
