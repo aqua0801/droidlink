@@ -60,6 +60,7 @@ dependencies {
     // Sync-folder viewer: thumbnails, zoomable images, video/audio playback.
     implementation(libs.coil.compose)
     implementation(libs.coil.video)
+    implementation(libs.coil.gif)
     implementation(libs.telephoto.zoomable)
     implementation(libs.telephoto.zoomable.image.coil3)
     implementation(libs.media3.exoplayer)

@@ -5,6 +5,7 @@ import android.content.Context
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
+import coil3.gif.AnimatedImageDecoder
 import coil3.request.crossfade
 import coil3.video.VideoFrameDecoder
 import io.github.aqua0801.droidlink.clipboard.ClipboardBridge
@@ -32,10 +33,13 @@ class DroidLinkApp : Application(), SingletonImageLoader.Factory {
         graph = AppGraph(this)
     }
 
-    /** Coil loader shared by thumbnails and the image viewer; also decodes video frames. */
+    /** Coil loader shared by thumbnails and the image viewer; also decodes video frames and animated GIF/WebP. */
     override fun newImageLoader(context: PlatformContext): ImageLoader =
         ImageLoader.Builder(context)
-            .components { add(VideoFrameDecoder.Factory()) }
+            .components {
+                add(AnimatedImageDecoder.Factory())
+                add(VideoFrameDecoder.Factory())
+            }
             .crossfade(true)
             .build()
 }
