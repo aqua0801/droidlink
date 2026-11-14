@@ -84,7 +84,10 @@ fun PdfViewer(tree: SafTree, entry: DocEntry, onBack: () -> Unit) {
             }
         }
     }
-    DisposableEffect(doc) { onDispose { doc?.getOrNull()?.close() } }
+    // Close exactly the document this effect was started for; reading `doc` inside onDispose
+    // would see the newer value and close the document that just finished loading.
+    val opened = doc?.getOrNull()
+    DisposableEffect(opened) { onDispose { opened?.close() } }
     val list = rememberLazyListState()
     // Only recompose the title when the page number actually changes, not on every scroll frame.
     val firstPage by remember { derivedStateOf { list.firstVisibleItemIndex } }
@@ -123,8 +126,8 @@ fun PdfViewer(tree: SafTree, entry: DocEntry, onBack: () -> Unit) {
 private fun PdfPage(pdf: PdfDocument, index: Int) {
     // Render at twice the window width so zoomed-in text stays sharp.
     val widthPx = LocalWindowInfo.current.containerSize.width.coerceAtLeast(1) * 2
-    val bitmap by produceState<ImageBitmap?>(null, pdf, index, widthPx) {
-        value = withContext(Dispatchers.IO) { runCatching { pdf.render(index, widthPx).asImageBitmap() }.getOrNull() }
+    val bitmap by produceState<Result<ImageBitmap>?>(null, pdf, index, widthPx) {
+        value = withContext(Dispatchers.IO) { runCatching { pdf.render(index, widthPx).asImageBitmap() } }
     }
     val zoom = rememberZoomableState()
     Box(
@@ -134,16 +137,17 @@ private fun PdfPage(pdf: PdfDocument, index: Int) {
             .background(Color.White),
         contentAlignment = Alignment.Center,
     ) {
-        val image = bitmap
-        if (image != null) {
-            Image(
+        val result = bitmap
+        val image = result?.getOrNull()
+        when {
+            result == null -> CircularProgressIndicator()
+            image == null -> Text(stringResource(R.string.viewer_load_failed), color = Color.DarkGray)
+            else -> Image(
                 bitmap = image,
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.fillMaxSize().zoomable(zoom),
             )
-        } else {
-            CircularProgressIndicator()
         }
     }
 }
