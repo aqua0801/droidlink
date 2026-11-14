@@ -2,6 +2,11 @@ package io.github.aqua0801.droidlink
 
 import android.app.Application
 import android.content.Context
+import coil3.ImageLoader
+import coil3.PlatformContext
+import coil3.SingletonImageLoader
+import coil3.request.crossfade
+import coil3.video.VideoFrameDecoder
 import io.github.aqua0801.droidlink.clipboard.ClipboardBridge
 import io.github.aqua0801.droidlink.data.DeviceInfo
 import io.github.aqua0801.droidlink.data.PairedPcStore
@@ -18,7 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import java.io.File
 
-class DroidLinkApp : Application() {
+class DroidLinkApp : Application(), SingletonImageLoader.Factory {
     lateinit var graph: AppGraph
         private set
 
@@ -26,6 +31,13 @@ class DroidLinkApp : Application() {
         super.onCreate()
         graph = AppGraph(this)
     }
+
+    /** Coil loader shared by thumbnails and the image viewer; also decodes video frames. */
+    override fun newImageLoader(context: PlatformContext): ImageLoader =
+        ImageLoader.Builder(context)
+            .components { add(VideoFrameDecoder.Factory()) }
+            .crossfade(true)
+            .build()
 }
 
 /** Process-wide singletons. Small enough that a DI framework isn't worth it yet. */

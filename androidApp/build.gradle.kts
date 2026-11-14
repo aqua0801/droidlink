@@ -56,4 +56,12 @@ dependencies {
     implementation(libs.androidx.lifecycle.service)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.zxing.android.embedded)
+
+    // Sync-folder viewer: thumbnails, zoomable images, video/audio playback.
+    implementation(libs.coil.compose)
+    implementation(libs.coil.video)
+    implementation(libs.telephoto.zoomable)
+    implementation(libs.telephoto.zoomable.image.coil3)
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.ui)
 }

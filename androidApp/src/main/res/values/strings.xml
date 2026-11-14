@@ -151,4 +151,13 @@
     <string name="browser_empty">資料夾是空的</string>
     <string name="browser_share">分享</string>
     <string name="browser_refresh">重新整理</string>
+
+    <!-- Viewer -->
+    <string name="viewer_open_with">用其他 App 開啟</string>
+    <string name="viewer_position">%1$d / %2$d</string>
+    <string name="viewer_text_truncated">檔案較大，只顯示前 %1$s</string>
+    <string name="viewer_load_failed">無法開啟這個檔案</string>
+    <string name="viewer_pdf_page">第 %1$d 頁，共 %2$d 頁</string>
+    <string name="browser_grid">格狀檢視</string>
+    <string name="browser_list">清單檢視</string>
 </resources>
