@@ -29,6 +29,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+private enum class Screen { MAIN, SETTINGS, SYNC_BROWSER }
+
 class MainActivity : ComponentActivity() {
     private val scanLauncher = registerForActivityResult(ScanContract()) { result ->
         result.contents?.let(::onScanned)
@@ -65,18 +67,19 @@ class MainActivity : ComponentActivity() {
                 val style = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { dark }
                 enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
             }
-            var showSettings by rememberSaveable { mutableStateOf(false) }
+            var screen by rememberSaveable { mutableStateOf(Screen.MAIN) }
             DroidLinkTheme(dark) {
-                if (showSettings) {
-                    SettingsScreen(graph.settings, onBack = { showSettings = false })
-                } else {
-                    MainScreen(
+                when (screen) {
+                    Screen.SETTINGS -> SettingsScreen(graph.settings, onBack = { screen = Screen.MAIN })
+                    Screen.SYNC_BROWSER -> FolderBrowserScreen(graph.syncFolder, onBack = { screen = Screen.MAIN })
+                    Screen.MAIN -> MainScreen(
                         graph = graph,
                         onScan = ::launchScanner,
                         onSendClipboard = ::sendClipboardNow,
                         onPickFiles = { filePicker.launch(arrayOf("*/*")) },
                         onOpenFile = ::openReceived,
-                        onOpenSettings = { showSettings = true },
+                        onOpenSettings = { screen = Screen.SETTINGS },
+                        onBrowseSync = { screen = Screen.SYNC_BROWSER },
                     )
                 }
             }

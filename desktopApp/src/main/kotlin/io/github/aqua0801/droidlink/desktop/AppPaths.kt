@@ -13,6 +13,10 @@ class AppPaths(val dir: File) {
     /** Received files go to `<home>/Downloads/DroidLink`. */
     val downloadsDir = File(System.getProperty("user.home"), "Downloads${File.separator}DroidLink")
 
+    /** Default sync folder, `<home>/DroidLink Sync`, used until the user picks another. */
+    val defaultSyncDir = File(System.getProperty("user.home"), "DroidLink Sync")
+    val syncCacheFile = File(dir, "sync-cache.json")
+
     companion object {
         fun default(): AppPaths {
             val isWindows = System.getProperty("os.name").lowercase().contains("win")

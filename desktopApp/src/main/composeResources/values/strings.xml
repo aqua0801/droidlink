@@ -161,6 +161,23 @@
     <string name="shot_reveal">在資料夾中顯示</string>
     <string name="shot_close">關閉</string>
     <string name="notify_errors_hint">失敗或需要處理的提示（例如手機未連線、需要增強模式）一律會顯示。</string>
+    <string name="settings_sync">同步資料夾</string>
+    <string name="sync_folder_desc">這個資料夾會推送到手機。電腦是唯一來源：只會把手機缺少或內容不同的檔案覆蓋過去，手機上的修改不會傳回電腦。</string>
+    <string name="sync_choose_title">選擇同步資料夾</string>
+    <string name="sync_change">變更…</string>
+    <string name="sync_use_default">使用預設位置</string>
+    <string name="sync_mirror">完整鏡像</string>
+    <string name="sync_mirror_desc">同時刪除手機上、電腦資料夾已經沒有的檔案</string>
+    <string name="device_sync">同步資料夾</string>
+    <string name="sync_comparing">同步中：比對檔案…</string>
+    <string name="sync_running">同步中：%1$d / %2$d</string>
+    <string name="sync_finished">上次同步 %1$s：更新 %2$d、未變更 %3$d</string>
+    <string name="sync_finished_deleted">、刪除 %1$d</string>
+    <string name="sync_finished_failed">（失敗 %1$d）</string>
+    <string name="sync_failed_folder">同步失敗：電腦的同步資料夾不存在，請到設定確認</string>
+    <string name="sync_failed_phone_not_ready">手機尚未設定同步資料夾，請在手機 App 選擇資料夾</string>
+    <string name="sync_failed_no_reply">同步失敗：手機沒有回應，可能是手機版本太舊</string>
+    <string name="sync_failed_disconnected">同步中斷：連線已中斷</string>
     <string name="settings_files">檔案</string>
     <string name="settings_downloads">收到的檔案存放位置</string>
 

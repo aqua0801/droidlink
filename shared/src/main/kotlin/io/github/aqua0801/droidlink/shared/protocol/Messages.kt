@@ -93,11 +93,51 @@ data class FileOffer(
     val mime: String? = null,
     /** Omitted on the wire for ordinary files, so older peers still understand the offer. */
     val kind: FileKind = FileKind.FILE,
+    /** For [FileKind.SYNC]: location inside the sync folder, `/`-separated (see SyncPaths). */
+    val path: String? = null,
 ) : Message()
 
 /** Why a file is being sent; the receiver may store or present it differently. */
 @Serializable
-enum class FileKind { FILE, SCREENSHOT }
+enum class FileKind {
+    FILE,
+    SCREENSHOT,
+
+    /** Part of a sync-folder push; replaces the file at [FileOffer.path]. */
+    SYNC,
+}
+
+// ---- Sync folder -----------------------------------------------------------------------
+// The PC folder is the source of truth. A sync run, always started on the PC:
+//   PC -> sync.list.request, phone -> sync.list (what it has),
+//   PC sends missing or different files as FileKind.SYNC transfers,
+//   optionally PC -> sync.delete / phone -> sync.deleted for files the PC no longer has,
+//   PC -> sync.done with the totals.
+
+/** One file in a sync folder. [path] is relative to the folder root, `/`-separated. */
+@Serializable
+data class SyncEntry(val path: String, val size: Long, val sha256: String)
+
+@Serializable
+@SerialName("sync.list.request")
+data class SyncListRequest(val requestId: Long) : Message()
+
+/** [ready] is false when the phone has no sync folder set up yet. */
+@Serializable
+@SerialName("sync.list")
+data class SyncList(val requestId: Long, val ready: Boolean, val entries: List<SyncEntry> = emptyList()) : Message()
+
+@Serializable
+@SerialName("sync.delete")
+data class SyncDelete(val requestId: Long, val paths: List<String>) : Message()
+
+@Serializable
+@SerialName("sync.deleted")
+data class SyncDeleted(val requestId: Long, val deleted: Int, val failed: Int) : Message()
+
+@Serializable
+@SerialName("sync.done")
+data class SyncDone(val requestId: Long, val updated: Int, val unchanged: Int, val deleted: Int, val failed: Int) : Message()
 
 @Serializable
 @SerialName("file.accept")

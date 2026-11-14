@@ -55,6 +55,7 @@ import io.github.aqua0801.droidlink.desktop.hotkey.Hotkey
 import io.github.aqua0801.droidlink.desktop.hotkey.HotkeyAction
 import io.github.aqua0801.droidlink.desktop.hotkey.HotkeyStatus
 import io.github.aqua0801.droidlink.desktop.platform.FileReveal
+import io.github.aqua0801.droidlink.desktop.platform.chooseFolder
 import io.github.aqua0801.droidlink.desktop.resources.*
 import io.github.aqua0801.droidlink.shared.settings.ThemeMode
 import org.jetbrains.compose.resources.StringResource
@@ -151,6 +152,28 @@ fun SettingsScreen(controller: DesktopController, onBack: () -> Unit) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+
+            Section(stringResource(Res.string.settings_sync)) {
+                val custom = settings.sync.folder != null
+                val chooserTitle = stringResource(Res.string.sync_choose_title)
+                Text(stringResource(Res.string.sync_folder_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(controller.syncFolder.absolutePath, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = {
+                        chooseFolder(chooserTitle, controller.syncFolder)?.let { dir ->
+                            update { it.copy(sync = it.sync.copy(folder = dir.absolutePath)) }
+                        }
+                    }) { Text(stringResource(Res.string.sync_change)) }
+                    OutlinedButton(onClick = {
+                        controller.syncFolder.mkdirs()
+                        FileReveal.openFolder(controller.syncFolder)
+                    }) { Text(stringResource(Res.string.transfers_open_folder)) }
+                    if (custom) TextButton(onClick = controller::resetSyncFolder) { Text(stringResource(Res.string.sync_use_default)) }
+                }
+                SwitchOption(settings.sync.mirror, Res.string.sync_mirror, Res.string.sync_mirror_desc) { on ->
+                    update { it.copy(sync = it.sync.copy(mirror = on)) }
+                }
             }
 
             Section(stringResource(Res.string.settings_files)) {

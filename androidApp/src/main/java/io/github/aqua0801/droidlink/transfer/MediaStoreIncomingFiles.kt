@@ -18,7 +18,7 @@ import java.io.IOException
  * MediaStore picks a unique name if one already exists.
  */
 class MediaStoreIncomingFiles(private val context: Context) : IncomingFiles {
-    override fun open(name: String, size: Long, mime: String?, kind: FileKind): FileSink {
+    override fun open(name: String, size: Long, mime: String?, kind: FileKind, path: String?): FileSink {
         // Allocatable bytes include cache the system can clear; 0 if unknown (then don't block).
         val storage = context.getSystemService(StorageManager::class.java)
         val free = context.getExternalFilesDir(null)

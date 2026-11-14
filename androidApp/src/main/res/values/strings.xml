@@ -137,4 +137,18 @@
     <string name="action_allow">允許</string>
     <string name="action_open_system_settings">前往系統設定</string>
     <string name="action_turn_off">關閉此功能</string>
+
+    <!-- Sync folder -->
+    <string name="sync_title">同步資料夾</string>
+    <string name="sync_not_set">選一個資料夾來放電腦同步過來的檔案。裡面的圖片不會出現在相簿。</string>
+    <string name="sync_choose">選擇資料夾</string>
+    <string name="sync_change">變更資料夾</string>
+    <string name="sync_folder">資料夾：%1$s</string>
+    <string name="sync_browse">瀏覽</string>
+    <string name="sync_never">尚未同步過</string>
+    <string name="sync_last">上次同步 %1$s：更新 %2$d、刪除 %3$d</string>
+    <string name="sync_hint">在電腦端按「同步資料夾」開始同步。這裡是電腦資料夾的唯讀副本，在手機上的修改不會傳回電腦，下次同步時可能被覆蓋。</string>
+    <string name="browser_empty">資料夾是空的</string>
+    <string name="browser_share">分享</string>
+    <string name="browser_refresh">重新整理</string>
 </resources>

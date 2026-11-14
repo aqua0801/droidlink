@@ -128,7 +128,7 @@ class FileTransfers(
     }
 
     private suspend fun runSend(id: Long, out: Outgoing, session: LinkSession, source: FileSource): TransferError? {
-        session.send(FileOffer(id, source.name, source.size, source.mime, source.kind))
+        session.send(FileOffer(id, source.name, source.size, source.mime, source.kind, source.path))
         val answer = withTimeoutOrNull(DroidLinkDefaults.FILE_RESPONSE_TIMEOUT_MS) { out.accepted.await() }
             ?: return abortSend(id, session, TransferError.TIMEOUT)
         answer.error?.let { return it }
@@ -172,7 +172,7 @@ class FileTransfers(
         val name = FileNames.sanitize(offer.name)
         val sink = try {
             if (offer.size < 0) throw IOException("negative size")
-            incoming.open(name, offer.size, offer.mime, offer.kind)
+            incoming.open(name, offer.size, offer.mime, offer.kind, offer.path)
         } catch (e: Exception) {
             add(Transfer(offer.id, Direction.RECEIVE, name, offer.size, 0, TransferStatus.FAILED, session.peerName, TransferError.STORAGE, kind = offer.kind))
             _transfers.value.firstOrNull { it.id == offer.id }?.let { _finished.tryEmit(it) }

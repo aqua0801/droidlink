@@ -4,6 +4,7 @@ import android.content.Context
 import io.github.aqua0801.droidlink.AppGraph
 import io.github.aqua0801.droidlink.BuildConfig
 import io.github.aqua0801.droidlink.R
+import io.github.aqua0801.droidlink.data.LastSync
 import io.github.aqua0801.droidlink.data.PairedPc
 import io.github.aqua0801.droidlink.service.LinkService
 import io.github.aqua0801.droidlink.shared.crypto.Fingerprint
@@ -15,6 +16,12 @@ import io.github.aqua0801.droidlink.shared.pairing.PairingInfo
 import io.github.aqua0801.droidlink.shared.protocol.ClipboardText
 import io.github.aqua0801.droidlink.shared.protocol.Message
 import io.github.aqua0801.droidlink.shared.protocol.RejectReason
+import io.github.aqua0801.droidlink.shared.protocol.SyncDelete
+import io.github.aqua0801.droidlink.shared.protocol.SyncDeleted
+import io.github.aqua0801.droidlink.shared.protocol.SyncDone
+import io.github.aqua0801.droidlink.shared.protocol.SyncList
+import io.github.aqua0801.droidlink.shared.protocol.SyncListRequest
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -270,7 +277,7 @@ class LinkManager(private val context: Context, private val graph: AppGraph) {
             setState(gen, LinkState.Connected(fingerprint, session.peerName, host))
             graph.files.engine.attach(session)
             session.start { message ->
-                if (!graph.files.engine.onMessage(session, message)) onMessage(message)
+                if (!graph.files.engine.onMessage(session, message)) onMessage(session, message)
             }
             session.awaitClosed()
         } finally {
@@ -279,9 +286,21 @@ class LinkManager(private val context: Context, private val graph: AppGraph) {
         }
     }
 
-    private suspend fun onMessage(message: Message) {
+    private suspend fun onMessage(session: LinkSession, message: Message) {
         when (message) {
             is ClipboardText -> graph.clipboard.applyRemote(message.text)
+            // Listing may hash files; keep it off the session's message loop.
+            is SyncListRequest -> graph.scope.launch(Dispatchers.IO) {
+                val entries = runCatching { graph.syncFolder.list() }.getOrNull()
+                runCatching { session.send(SyncList(message.requestId, ready = entries != null, entries = entries.orEmpty())) }
+            }
+            is SyncDelete -> graph.scope.launch(Dispatchers.IO) {
+                val (deleted, failed) = graph.syncFolder.delete(message.paths)
+                runCatching { session.send(SyncDeleted(message.requestId, deleted, failed)) }
+            }
+            is SyncDone -> graph.settings.setLastSync(
+                LastSync(System.currentTimeMillis(), message.updated, message.unchanged, message.deleted, message.failed),
+            )
             else -> Unit
         }
     }

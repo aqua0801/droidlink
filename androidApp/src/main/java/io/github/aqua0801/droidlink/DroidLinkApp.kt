@@ -7,6 +7,7 @@ import io.github.aqua0801.droidlink.data.DeviceInfo
 import io.github.aqua0801.droidlink.data.PairedPcStore
 import io.github.aqua0801.droidlink.data.PhoneSettings
 import io.github.aqua0801.droidlink.screenshot.ScreenshotWatcher
+import io.github.aqua0801.droidlink.sync.PhoneSyncFolder
 import io.github.aqua0801.droidlink.link.LinkManager
 import io.github.aqua0801.droidlink.link.NsdDiscovery
 import io.github.aqua0801.droidlink.transfer.PhoneFileTransfers
@@ -42,6 +43,7 @@ class AppGraph(app: Application) {
     val nsd = NsdDiscovery(app)
     val link = LinkManager(app, this)
     val clipboard = ClipboardBridge(app, this)
+    val syncFolder = PhoneSyncFolder(app, settings)
     val files = PhoneFileTransfers(app, this)
     val screenshots = ScreenshotWatcher(app, this)
 }

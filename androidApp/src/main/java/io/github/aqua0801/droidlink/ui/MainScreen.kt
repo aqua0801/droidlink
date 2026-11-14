@@ -68,6 +68,7 @@ fun MainScreen(
     onPickFiles: () -> Unit,
     onOpenFile: (Transfer) -> Unit,
     onOpenSettings: () -> Unit,
+    onBrowseSync: () -> Unit,
 ) {
     val state by graph.link.state.collectAsStateWithLifecycle()
     val pcs by graph.pairedPcs.pcs.collectAsStateWithLifecycle()
@@ -109,6 +110,7 @@ fun MainScreen(
             item { ScreenshotAccessCard(graph.settings.sendScreenshots) }
             item { ClipboardCard(graph, connected = state is LinkState.Connected, onSendNow = onSendClipboard) }
             item { FilesCard(graph, connected = state is LinkState.Connected, onPick = onPickFiles, onOpen = onOpenFile) }
+            item { SyncFolderCard(graph.syncFolder, graph.settings, onBrowse = onBrowseSync) }
             item {
                 Text(
                     stringResource(R.string.section_paired),

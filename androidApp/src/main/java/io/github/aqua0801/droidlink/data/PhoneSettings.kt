@@ -35,6 +35,23 @@ class PhoneSettings(context: Context) {
     /** System notification when a file from the PC has been saved. */
     val notifyFileReceived = Toggle("notify_file_received", true)
 
+    private val _syncTreeUri = MutableStateFlow(prefs.getString(KEY_SYNC_TREE, null))
+    /** Folder picked for the sync mirror (a tree URI with a persisted grant). */
+    val syncTreeUri: StateFlow<String?> = _syncTreeUri.asStateFlow()
+
+    fun setSyncTreeUri(uri: String?) {
+        _syncTreeUri.value = uri
+        prefs.edit { putString(KEY_SYNC_TREE, uri) }
+    }
+
+    private val _lastSync = MutableStateFlow(LastSync.decode(prefs.getString(KEY_LAST_SYNC, null)))
+    val lastSync: StateFlow<LastSync?> = _lastSync.asStateFlow()
+
+    fun setLastSync(value: LastSync) {
+        _lastSync.value = value
+        prefs.edit { putString(KEY_LAST_SYNC, value.encode()) }
+    }
+
     private val _theme = MutableStateFlow(ThemeMode.parse(prefs.getString(KEY_THEME, null)))
     val theme: StateFlow<ThemeMode> = _theme.asStateFlow()
 
@@ -45,5 +62,20 @@ class PhoneSettings(context: Context) {
 
     private companion object {
         const val KEY_THEME = "theme"
+        const val KEY_SYNC_TREE = "sync_tree_uri"
+        const val KEY_LAST_SYNC = "sync_last"
+    }
+}
+
+/** Summary of the most recent sync the PC reported. */
+data class LastSync(val at: Long, val updated: Int, val unchanged: Int, val deleted: Int, val failed: Int) {
+    fun encode(): String = listOf(at, updated, unchanged, deleted, failed).joinToString(",")
+
+    companion object {
+        fun decode(raw: String?): LastSync? {
+            val parts = raw?.split(',')?.mapNotNull { it.toLongOrNull() } ?: return null
+            if (parts.size != 5) return null
+            return LastSync(parts[0], parts[1].toInt(), parts[2].toInt(), parts[3].toInt(), parts[4].toInt())
+        }
     }
 }

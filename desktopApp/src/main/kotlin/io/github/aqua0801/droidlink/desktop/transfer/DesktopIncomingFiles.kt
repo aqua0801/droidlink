@@ -17,7 +17,7 @@ import java.nio.file.Files
  * under its real name. Existing files are never overwritten: `name (1).ext` and so on.
  */
 class DesktopIncomingFiles(private val dir: File) : IncomingFiles {
-    override fun open(name: String, size: Long, mime: String?, kind: FileKind): FileSink {
+    override fun open(name: String, size: Long, mime: String?, kind: FileKind, path: String?): FileSink {
         val dir = if (kind == FileKind.SCREENSHOT) File(this.dir, SCREENSHOTS) else this.dir
         if (!dir.isDirectory && !dir.mkdirs()) throw IOException("cannot create $dir")
         val free = dir.usableSpace

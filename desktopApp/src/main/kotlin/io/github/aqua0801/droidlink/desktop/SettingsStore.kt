@@ -54,6 +54,14 @@ data class NotificationSettings(
     val screenshot: Boolean = true,
 )
 
+/** The PC folder pushed to phones; [folder] null means the default location. */
+@Serializable
+data class SyncSettings(
+    val folder: String? = null,
+    /** Also delete phone files that are no longer in the PC folder. */
+    val mirror: Boolean = false,
+)
+
 @Serializable
 data class DesktopSettings(
     val theme: ThemeMode = ThemeMode.SYSTEM,
@@ -63,6 +71,7 @@ data class DesktopSettings(
     val pullHotkey: Hotkey = Hotkey.DEFAULT_PULL,
     val battery: BatteryAlertSettings = BatteryAlertSettings(),
     val notifications: NotificationSettings = NotificationSettings(),
+    val sync: SyncSettings = SyncSettings(),
 )
 
 class SettingsStore(private val file: File) {

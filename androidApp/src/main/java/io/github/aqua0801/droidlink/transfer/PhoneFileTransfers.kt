@@ -16,6 +16,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import io.github.aqua0801.droidlink.AppGraph
 import io.github.aqua0801.droidlink.R
+import io.github.aqua0801.droidlink.shared.protocol.FileKind
 import io.github.aqua0801.droidlink.shared.transfer.Direction
 import io.github.aqua0801.droidlink.shared.transfer.FileSource
 import io.github.aqua0801.droidlink.shared.transfer.FileTransfers
@@ -27,7 +28,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 /** Phone side of file transfer: sending content URIs, saving incoming files, notifications. */
 class PhoneFileTransfers(private val context: Context, private val graph: AppGraph) {
-    val engine = FileTransfers(graph.scope, MediaStoreIncomingFiles(context))
+    val engine = FileTransfers(graph.scope, PhoneIncomingFiles(MediaStoreIncomingFiles(context), graph.syncFolder))
 
     /** Streams opened up front for pending sends; closed when each transfer ends. */
     private val openStreams = ConcurrentHashMap<Long, InputStream>()
@@ -49,7 +50,7 @@ class PhoneFileTransfers(private val context: Context, private val graph: AppGra
         graph.scope.launch {
             engine.finished.collect { t ->
                 openStreams.remove(t.id)?.let { runCatching { it.close() } }
-                if (t.direction == Direction.RECEIVE && t.status == TransferStatus.DONE &&
+                if (t.direction == Direction.RECEIVE && t.status == TransferStatus.DONE && t.kind == FileKind.FILE &&
                     graph.settings.notifyFileReceived.value.value
                 ) {
                     notifyReceived(t)

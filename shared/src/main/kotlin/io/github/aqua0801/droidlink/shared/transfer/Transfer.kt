@@ -39,6 +39,8 @@ class FileSource(
     val size: Long,
     val mime: String?,
     val kind: FileKind = FileKind.FILE,
+    /** Sync-folder location, sent along with [FileKind.SYNC]. */
+    val path: String? = null,
     private val opener: () -> InputStream,
 ) {
     fun open(): InputStream = opener()
@@ -47,7 +49,7 @@ class FileSource(
 /** Where incoming files go. Implemented per platform. */
 interface IncomingFiles {
     /** Creates a destination for an offered file. Throw to decline (reported as STORAGE). */
-    fun open(name: String, size: Long, mime: String?, kind: FileKind = FileKind.FILE): FileSink
+    fun open(name: String, size: Long, mime: String?, kind: FileKind = FileKind.FILE, path: String? = null): FileSink
 }
 
 /** A destination being written. Exactly one of [commit] or [abort] is called. */

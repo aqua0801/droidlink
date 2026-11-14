@@ -40,6 +40,8 @@ import androidx.compose.ui.unit.dp
 import io.github.aqua0801.droidlink.desktop.ClipEvent
 import io.github.aqua0801.droidlink.desktop.ConnectedDevice
 import io.github.aqua0801.droidlink.desktop.DesktopSettings
+import io.github.aqua0801.droidlink.desktop.sync.SyncFailure
+import io.github.aqua0801.droidlink.desktop.sync.SyncStatus
 import io.github.aqua0801.droidlink.desktop.PcToPhoneMode
 import io.github.aqua0801.droidlink.desktop.PhoneToPcMode
 import io.github.aqua0801.droidlink.desktop.DesktopController
@@ -67,6 +69,7 @@ fun MainScreen(controller: DesktopController, onOpenSettings: () -> Unit) {
     val settings by controller.settings.settings.collectAsState()
     val lastSent by controller.clipboard.lastSent.collectAsState()
     val lastReceived by controller.clipboard.lastReceived.collectAsState()
+    val syncStatus by controller.sync.status.collectAsState()
 
     var dropHover by remember { mutableStateOf(false) }
 
@@ -81,7 +84,12 @@ fun MainScreen(controller: DesktopController, onOpenSettings: () -> Unit) {
                 Section(stringResource(Res.string.section_devices)) {
                     if (devices.isEmpty()) Hint(stringResource(Res.string.devices_empty))
                     devices.forEach { device ->
-                        DeviceRow(device, onSendFiles = { files -> controller.sendFiles(device.fingerprint, files) })
+                        DeviceRow(
+                            device = device,
+                            sync = syncStatus[device.fingerprint],
+                            onSendFiles = { files -> controller.sendFiles(device.fingerprint, files) },
+                            onSync = { controller.startSync(device.fingerprint) },
+                        )
                     }
                 }
 
@@ -196,7 +204,7 @@ private fun ClipLine(label: StringResource, event: ClipEvent) {
 }
 
 @Composable
-private fun DeviceRow(device: ConnectedDevice, onSendFiles: (List<File>) -> Unit) {
+private fun DeviceRow(device: ConnectedDevice, sync: SyncStatus?, onSendFiles: (List<File>) -> Unit, onSync: () -> Unit) {
     val dialogTitle = stringResource(Res.string.send_dialog_title)
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -204,10 +212,16 @@ private fun DeviceRow(device: ConnectedDevice, onSendFiles: (List<File>) -> Unit
                 Text(device.name, style = MaterialTheme.typography.titleSmall)
                 Text(device.address, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            OutlinedButton(onClick = { chooseFiles(dialogTitle).takeIf { it.isNotEmpty() }?.let(onSendFiles) }) {
-                Text(stringResource(Res.string.device_send_files))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onSync, enabled = sync !is SyncStatus.Running) {
+                    Text(stringResource(Res.string.device_sync))
+                }
+                OutlinedButton(onClick = { chooseFiles(dialogTitle).takeIf { it.isNotEmpty() }?.let(onSendFiles) }) {
+                    Text(stringResource(Res.string.device_send_files))
+                }
             }
         }
+        sync?.let { SyncLine(it) }
         val battery = device.battery
         if (battery == null) {
             Hint(stringResource(Res.string.battery_waiting))
@@ -220,6 +234,40 @@ private fun DeviceRow(device: ConnectedDevice, onSendFiles: (List<File>) -> Unit
             )
             Text(batteryLine(battery), style = MaterialTheme.typography.bodyMedium)
         }
+    }
+}
+
+@Composable
+private fun SyncLine(status: SyncStatus) {
+    val text = when (status) {
+        is SyncStatus.Running ->
+            if (status.total == 0) stringResource(Res.string.sync_comparing)
+            else stringResource(Res.string.sync_running, status.done, status.total)
+        is SyncStatus.Finished -> {
+            val r = status.result
+            val time = clipTimeFormat.format(Instant.ofEpochMilli(status.at))
+            val base = stringResource(Res.string.sync_finished, time, r.updated, r.unchanged)
+            val deleted = if (r.deleted > 0) stringResource(Res.string.sync_finished_deleted, r.deleted) else ""
+            val failed = if (r.failed > 0) stringResource(Res.string.sync_finished_failed, r.failed) else ""
+            base + deleted + failed
+        }
+        is SyncStatus.Failed -> stringResource(
+            when (status.reason) {
+                SyncFailure.FOLDER_MISSING -> Res.string.sync_failed_folder
+                SyncFailure.PHONE_NOT_READY -> Res.string.sync_failed_phone_not_ready
+                SyncFailure.NO_REPLY -> Res.string.sync_failed_no_reply
+                SyncFailure.DISCONNECTED -> Res.string.sync_failed_disconnected
+            },
+        )
+    }
+    val error = status is SyncStatus.Failed || (status is SyncStatus.Finished && status.result.failed > 0)
+    Text(
+        text,
+        style = MaterialTheme.typography.bodySmall,
+        color = if (error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    if (status is SyncStatus.Running && status.total > 0) {
+        LinearProgressIndicator(progress = { status.done.toFloat() / status.total }, modifier = Modifier.fillMaxWidth())
     }
 }
 

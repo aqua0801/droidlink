@@ -44,10 +44,12 @@ class FileTransferTest {
         val committed = ConcurrentHashMap<String, ByteArray>()
         val aborted = ConcurrentHashMap.newKeySet<String>()
         val kinds = ConcurrentHashMap<String, FileKind>()
+        val paths = ConcurrentHashMap<String, String>()
 
-        override fun open(name: String, size: Long, mime: String?, kind: FileKind): FileSink {
+        override fun open(name: String, size: Long, mime: String?, kind: FileKind, path: String?): FileSink {
             if (decline) throw IllegalStateException("no space")
             kinds[name] = kind
+            if (path != null) paths[name] = path
             val buffer = ByteArrayOutputStream()
             return object : FileSink {
                 override val output = buffer
@@ -132,6 +134,21 @@ class FileTransferTest {
             assertEquals(FileKind.SCREENSHOT, pcIn.kinds["Screenshot_1.png"])
             assertEquals(FileKind.FILE, pcFiles.awaitFinished(plain).kind)
             assertEquals(FileKind.FILE, pcIn.kinds["notes.txt"])
+        }
+    }
+
+    @Test
+    fun syncPathReachesTheReceiver() {
+        val phoneIn = MemoryIncoming()
+        connect(MemoryIncoming(), phoneIn) {
+            val data = bytes(50)
+            val id = pcFiles.send(
+                pcSession,
+                FileSource("b.txt", data.size.toLong(), "text/plain", FileKind.SYNC, "docs/a/b.txt") { ByteArrayInputStream(data) },
+            )
+            assertEquals(TransferStatus.DONE, phoneFiles.awaitFinished(id).status)
+            assertEquals(FileKind.SYNC, phoneIn.kinds["b.txt"])
+            assertEquals("docs/a/b.txt", phoneIn.paths["b.txt"])
         }
     }
 

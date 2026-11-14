@@ -30,6 +30,8 @@ import io.github.aqua0801.droidlink.shared.pairing.PairingTokens
 import io.github.aqua0801.droidlink.shared.protocol.BatteryStatus
 import io.github.aqua0801.droidlink.shared.protocol.ClipboardText
 import io.github.aqua0801.droidlink.shared.protocol.FileKind
+import io.github.aqua0801.droidlink.desktop.sync.DesktopSync
+import io.github.aqua0801.droidlink.desktop.sync.SyncFolderScanner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -93,6 +95,27 @@ class DesktopController(
     /** File transfer over the P2P link, both directions. */
     val downloadsDir: File get() = paths.downloadsDir
     val files = FileTransfers(scope, DesktopIncomingFiles(paths.downloadsDir))
+
+    /** Folder push to phones; the PC folder is the source of truth. */
+    val syncFolder: File get() = settings.settings.value.sync.folder?.let(::File) ?: paths.defaultSyncDir
+    val sync = DesktopSync(
+        scope = scope,
+        files = files,
+        scanner = SyncFolderScanner(paths.syncCacheFile),
+        folder = { syncFolder },
+        mirror = { settings.settings.value.sync.mirror },
+    )
+
+    fun startSync(fingerprint: Fingerprint) {
+        val session = sessions[fingerprint] ?: return
+        // The default folder is created on demand; a custom one must already exist.
+        if (settings.settings.value.sync.folder == null) paths.defaultSyncDir.mkdirs()
+        sync.start(fingerprint, session)
+    }
+
+    fun resetSyncFolder() {
+        settings.update { it.copy(sync = it.sync.copy(folder = null)) }
+    }
 
     private val _screenshot = MutableStateFlow<ScreenshotNotice?>(null)
     /** The latest screenshot to preview; a newer one replaces it. */
@@ -251,6 +274,7 @@ class DesktopController(
         }
         return handler@{ message ->
             if (files.onMessage(session, message)) return@handler
+            if (sync.onMessage(message)) return@handler
             when (message) {
                 is BatteryStatus -> onBattery(fingerprint, session.peerName, message)
                 is ClipboardText -> clipboardRouting.onPhoneText(message.text)
