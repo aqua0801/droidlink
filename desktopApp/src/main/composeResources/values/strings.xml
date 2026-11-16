@@ -161,6 +161,11 @@
     <string name="shot_reveal">在資料夾中顯示</string>
     <string name="shot_close">關閉</string>
     <string name="notify_errors_hint">失敗或需要處理的提示（例如手機未連線、需要增強模式）一律會顯示。</string>
+    <string name="mirror_start">投影畫面</string>
+    <string name="mirror_stop">停止投影</string>
+    <string name="mirror_starting">正在啟動投影…</string>
+    <string name="mirror_title">%1$s 的畫面</string>
+    <string name="mirror_failed">投影失敗：%1$s</string>
     <string name="settings_sync">同步資料夾</string>
     <string name="sync_folder_desc">這個資料夾會推送到手機。電腦是唯一來源：只會把手機缺少或內容不同的檔案覆蓋過去，手機上的修改不會傳回電腦。</string>
     <string name="sync_choose_title">選擇同步資料夾</string>

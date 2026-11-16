@@ -31,6 +31,13 @@ dependencies {
     implementation(libs.jna)
     implementation(libs.jna.platform)
 
+    // Screen mirroring: FFmpeg (LGPL build) via bytedeco. Natives only for Windows x86_64,
+    // the one packaged target so far; add other classifiers when Linux is packaged.
+    implementation(libs.bytedeco.ffmpeg)
+    implementation(libs.bytedeco.javacpp)
+    implementation(variantOf(libs.bytedeco.ffmpeg) { classifier("windows-x86_64") })
+    implementation(variantOf(libs.bytedeco.javacpp) { classifier("windows-x86_64") })
+
     testImplementation(libs.kotlin.test)
 }
 
@@ -39,6 +46,7 @@ tasks.test {
     // Opt-in: `-PrealHotkeys=true` runs the test that registers a real global hotkey and
     // presses it with java.awt.Robot (it sends keystrokes to this desktop session).
     systemProperty("droidlink.realHotkeys", providers.gradleProperty("realHotkeys").getOrElse("false"))
+    systemProperty("droidlink.realMirror", providers.gradleProperty("realMirror").getOrElse("false"))
 }
 
 // Bundle the phone-side helper (DEX jar from the :agent module) as a resource. At runtime it is

@@ -32,7 +32,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.aqua0801.droidlink.desktop.DesktopController
 import io.github.aqua0801.droidlink.desktop.adb.AgentState
+import io.github.aqua0801.droidlink.desktop.mirror.MirrorState
 import io.github.aqua0801.droidlink.desktop.resources.Res
+import io.github.aqua0801.droidlink.desktop.resources.mirror_start
+import io.github.aqua0801.droidlink.desktop.resources.mirror_stop
 import io.github.aqua0801.droidlink.desktop.resources.enhanced_adb_missing
 import io.github.aqua0801.droidlink.desktop.resources.enhanced_device_offline
 import io.github.aqua0801.droidlink.desktop.resources.enhanced_device_unauthorized
@@ -103,7 +106,15 @@ fun EnhancedSection(controller: DesktopController) {
 
         StateLine(state)
 
-        if (state is AgentState.Connected) {
+        val connected = state as? AgentState.Connected
+        if (connected != null) {
+            val mirrorState by controller.mirror.state.collectAsState()
+            val mirroring = mirrorState !is MirrorState.Idle
+            OutlinedButton(onClick = {
+                if (mirroring) controller.mirror.stop() else controller.mirror.start(connected.serial)
+            }) {
+                Text(stringResource(if (mirroring) Res.string.mirror_stop else Res.string.mirror_start))
+            }
             LogcatPanel(controller)
             InstallPanel(controller)
 

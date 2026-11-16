@@ -24,6 +24,7 @@ import io.github.aqua0801.droidlink.desktop.resources.tray_show
 import io.github.aqua0801.droidlink.desktop.ui.AppIcon
 import io.github.aqua0801.droidlink.desktop.ui.DroidLinkDesktopTheme
 import io.github.aqua0801.droidlink.desktop.ui.MainScreen
+import io.github.aqua0801.droidlink.desktop.ui.MirrorWindow
 import io.github.aqua0801.droidlink.desktop.ui.ScreenshotPopup
 import io.github.aqua0801.droidlink.desktop.ui.SettingsScreen
 import io.github.aqua0801.droidlink.desktop.ui.isDarkTheme
@@ -69,6 +70,8 @@ fun main() {
                 },
             )
         }
+
+        MirrorWindow(controller.mirror, dark)
 
         val shot by controller.screenshot.collectAsState()
         shot?.let { notice ->

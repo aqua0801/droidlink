@@ -30,6 +30,7 @@ import io.github.aqua0801.droidlink.shared.pairing.PairingTokens
 import io.github.aqua0801.droidlink.shared.protocol.BatteryStatus
 import io.github.aqua0801.droidlink.shared.protocol.ClipboardText
 import io.github.aqua0801.droidlink.shared.protocol.FileKind
+import io.github.aqua0801.droidlink.desktop.mirror.MirrorController
 import io.github.aqua0801.droidlink.desktop.sync.DesktopSync
 import io.github.aqua0801.droidlink.desktop.sync.SyncFolderScanner
 import kotlinx.coroutines.CoroutineScope
@@ -87,6 +88,9 @@ class DesktopController(
 
     /** Enhanced mode (ADB). Independent of the P2P link above. */
     val agent = AgentController(scope)
+
+    /** Phone screen over ADB (scrcpy-server); see docs/screen-mirror.md. */
+    val mirror = MirrorController(scope)
 
     /** Clipboard modes, hotkeys and routing between the PC, P2P phones and enhanced mode. */
     val clipboardRouting = ClipboardCoordinator(scope, settings, agent, notifier) { sessions.values }
@@ -182,6 +186,7 @@ class DesktopController(
     fun stop() {
         cancelPairing()
         clipboardRouting.stop()
+        mirror.stop()
         agent.shutdown()
         sessions.values.forEach { it.close() }
         server?.stop()
