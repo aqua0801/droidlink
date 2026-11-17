@@ -7,6 +7,7 @@ import io.github.aqua0801.droidlink.shared.crypto.PinnedTrustManager
 import io.github.aqua0801.droidlink.shared.crypto.Tls
 import io.github.aqua0801.droidlink.shared.pairing.PairingTokens
 import io.github.aqua0801.droidlink.shared.protocol.Hello
+import io.github.aqua0801.droidlink.shared.protocol.MirrorStreamHello
 import io.github.aqua0801.droidlink.shared.protocol.PROTOCOL_VERSION
 import io.github.aqua0801.droidlink.shared.protocol.RejectReason
 import io.github.aqua0801.droidlink.shared.protocol.Rejected
@@ -26,6 +27,12 @@ interface PeerTrust {
     fun addTrusted(fingerprint: Fingerprint, name: String)
 }
 
+/** Receives extra connections that carry a raw stream (see [MirrorStreamHello]). */
+fun interface StreamListener {
+    /** Called on an IO thread with an authenticated connection from a trusted peer; must not block long. */
+    fun onStream(connection: Connection, hello: MirrorStreamHello)
+}
+
 fun interface SessionListener {
     /** Called for every authenticated session; returns the handler for its messages. */
     fun onSessionOpened(session: LinkSession): MessageHandler
@@ -41,6 +48,7 @@ class LinkServer(
     private val scope: CoroutineScope,
     private val requestedPort: Int = DroidLinkDefaults.PORT,
     private val platform: String = "desktop",
+    private val streams: StreamListener? = null,
 ) {
     @Volatile
     private var serverSocket: SSLServerSocket? = null
@@ -76,7 +84,18 @@ class LinkServer(
             socket.startHandshake()
             val connection = Connection(socket)
 
-            val hello = connection.receive() as? Hello ?: run {
+            val first = connection.receive()
+            if (first is MirrorStreamHello) {
+                // Stream connections never pair; the peer must already be trusted.
+                if (streams == null || !trust.isTrusted(connection.peerFingerprint)) {
+                    connection.close()
+                } else {
+                    connection.readTimeoutMs = 0
+                    streams.onStream(connection, first)
+                }
+                return
+            }
+            val hello = first as? Hello ?: run {
                 connection.close()
                 return
             }

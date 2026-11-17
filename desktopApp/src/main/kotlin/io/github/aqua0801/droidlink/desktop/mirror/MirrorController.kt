@@ -4,6 +4,12 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asComposeImageBitmap
 import androidx.compose.ui.graphics.toAwtImage
 import io.github.aqua0801.droidlink.desktop.adb.Adb
+import io.github.aqua0801.droidlink.shared.link.Connection
+import io.github.aqua0801.droidlink.shared.link.LinkSession
+import io.github.aqua0801.droidlink.shared.protocol.MirrorReady
+import io.github.aqua0801.droidlink.shared.protocol.MirrorRequest
+import io.github.aqua0801.droidlink.shared.protocol.MirrorStop
+import io.github.aqua0801.droidlink.shared.protocol.MirrorStreamHello
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -19,18 +25,24 @@ import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.ColorAlphaType
 import org.jetbrains.skia.ColorType
 import org.jetbrains.skia.ImageInfo
+import java.io.Closeable
 import java.io.File
 import java.io.IOException
 import java.net.Socket
+import java.security.SecureRandom
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.HexFormat
 import javax.imageio.ImageIO
 import kotlin.random.Random
 
 /**
- * Phone screen over ADB with the bundled scrcpy-server: video in, touch/keys out.
- * One mirror at a time. Frames are decoded on an IO thread and published as the latest
- * [ImageBitmap]; control messages go through a single queue so their order is kept.
+ * Shows one phone screen at a time, from either source:
+ * - ADB: bundled scrcpy-server, video in and touch/keys out ([startAdb]).
+ * - Wireless: the phone's own MediaProjection encoder over a second TLS connection, view
+ *   only ([startWireless] / [onStream]); the stream uses the same layout, so the same parser
+ *   and decoder serve both.
+ * Frames are decoded on an IO thread and published as the latest [ImageBitmap].
  */
 class MirrorController(private val scope: CoroutineScope, private val screenshotDir: File) {
     private val _state = MutableStateFlow<MirrorState>(MirrorState.Idle)
@@ -40,44 +52,92 @@ class MirrorController(private val scope: CoroutineScope, private val screenshot
     val frame: StateFlow<ImageBitmap?> = _frame.asStateFlow()
 
     private var job: Job? = null
+
+    /** Everything to close when the current mirror ends. */
+    private val resources = mutableListOf<Closeable>()
+
     @Volatile
-    private var session: Running? = null
+    private var outbox: Channel<ByteArray>? = null
 
-    private class Running(
-        val serial: String,
-        val process: Process,
-        val pcPort: Int,
-        val video: Socket,
-        val control: Socket,
-        val outbox: Channel<ByteArray>,
-    )
+    /** Pending or active wireless request. */
+    @Volatile
+    private var wireless: Wireless? = null
 
-    fun start(serial: String) {
+    private class Wireless(val requestId: Long, val token: String, val session: LinkSession, val peerName: String)
+
+    // ---- ADB -------------------------------------------------------------------------------
+
+    fun startAdb(serial: String) {
         stop()
         _state.value = MirrorState.Starting(serial)
+        launchRun(serial) { runAdb(serial) }
+    }
+
+    // ---- Wireless --------------------------------------------------------------------------
+
+    /** Asks the phone behind [session] to start mirroring; the user has to accept on the phone. */
+    fun startWireless(session: LinkSession, maxSize: Int = 1600) {
+        stop()
+        val request = Wireless(Random.nextLong(1, Long.MAX_VALUE), newToken(), session, session.peerName)
+        wireless = request
+        _state.value = MirrorState.Starting(session.peerName, waitingForPhone = true)
         job = scope.launch(Dispatchers.IO) {
-            try {
-                run(serial)
-                if (_state.value !is MirrorState.Failed) _state.value = MirrorState.Idle
-            } catch (e: Exception) {
-                if (isActive) _state.value = MirrorState.Failed(serial, e.message ?: e.javaClass.simpleName)
-            } finally {
-                cleanup()
+            runCatching { session.send(MirrorRequest(request.requestId, request.token, maxSize)) }
+            delay(ANSWER_TIMEOUT_MS)
+            if (wireless === request && _state.value is MirrorState.Starting) {
+                fail(request.peerName, MirrorFailure.NO_ANSWER)
+                sendStop(request)
+                wireless = null
             }
         }
     }
 
+    /** A stream connection arrived (LinkServer). Returns false if it matches no pending request. */
+    fun onStream(connection: Connection, hello: MirrorStreamHello): Boolean {
+        val request = wireless ?: return false
+        if (hello.token != request.token || connection.peerFingerprint != request.session.peerFingerprint) return false
+        if (_state.value !is MirrorState.Starting) return false
+        job?.cancel()
+        launchRun(request.peerName) {
+            connection.send(MirrorReady())
+            val socket = connection.releaseSocket()
+            synchronized(resources) { resources += socket }
+            socket.soTimeout = STREAM_READ_TIMEOUT_MS
+            val stream = ScrcpyStream(socket.inputStream.buffered(256 * 1024), forwardTunnel = false)
+            pump(stream, stream.readHeader(), request.peerName, controllable = false)
+        }
+        return true
+    }
+
+    fun onDeclined(requestId: Long) {
+        val request = wireless?.takeIf { it.requestId == requestId } ?: return
+        wireless = null
+        job?.cancel()
+        fail(request.peerName, MirrorFailure.DECLINED)
+    }
+
+    /** The phone ended the session (stop button, projection revoked). */
+    fun onPhoneStopped(requestId: Long) {
+        if (wireless?.requestId != requestId) return
+        wireless = null
+        stop()
+    }
+
+    // ---- Common ----------------------------------------------------------------------------
+
     fun stop() {
         job?.cancel()
         job = null
+        wireless?.let(::sendStop)
+        wireless = null
         cleanup()
         _frame.value = null
         _state.value = MirrorState.Idle
     }
 
-    /** Queues a control message (see [ScrcpyControl]); dropped when not mirroring. */
+    /** Queues a control message (see [ScrcpyControl]); dropped when the mirror is view only. */
     fun send(message: ByteArray) {
-        session?.outbox?.trySend(message)
+        outbox?.trySend(message)
     }
 
     /** Builds a position in the current frame's coordinates, or null before the first frame. */
@@ -100,7 +160,21 @@ class MirrorController(private val scope: CoroutineScope, private val screenshot
         return runCatching { ImageIO.write(image.toAwtImage(), "png", file); file }.getOrNull()
     }
 
-    private suspend fun run(serial: String) {
+    private fun launchRun(target: String, body: suspend () -> Unit) {
+        job = scope.launch(Dispatchers.IO) {
+            try {
+                body()
+                if (_state.value !is MirrorState.Failed) _state.value = MirrorState.Idle
+            } catch (e: Exception) {
+                if (isActive) fail(target, MirrorFailure.ERROR, e.message ?: e.javaClass.simpleName)
+            } finally {
+                wireless = null
+                cleanup()
+            }
+        }
+    }
+
+    private suspend fun runAdb(serial: String) {
         val jar = ScrcpyServer.jarFile() ?: throw IllegalStateException("scrcpy-server is not bundled")
         val push = Adb.run("-s", serial, "push", jar.absolutePath, ScrcpyServer.REMOTE_JAR, timeoutMs = 30_000)
         if (!push.ok) throw IOException("push failed: ${push.output}")
@@ -109,32 +183,42 @@ class MirrorController(private val scope: CoroutineScope, private val screenshot
         val forward = Adb.run("-s", serial, "forward", "tcp:0", "localabstract:${options.socketName}")
         val pcPort = forward.output.lines().firstNotNullOfOrNull { it.trim().toIntOrNull() }
         if (!forward.ok || pcPort == null) throw IOException("forward failed: ${forward.output}")
+        track(Closeable { Adb.run("-s", serial, "forward", "--remove", "tcp:$pcPort", timeoutMs = 5_000) })
 
         val process = Adb.start("-s", serial, "shell", *ScrcpyServer.shellArgs(options).toTypedArray())
             ?: throw IllegalStateException("adb not found")
+        // cleanup=true lets the server tidy up on the phone once the sockets close.
+        track(Closeable { process.destroy() })
         drain(process)
 
+        // The server sends device meta only after every socket is connected: read the dummy
+        // byte on video, connect control, then read the rest of the header.
         val (video, stream) = connectVideo(pcPort)
+        track(video)
         val control = Socket("127.0.0.1", pcPort).apply { tcpNoDelay = true }
-        val outbox = Channel<ByteArray>(Channel.UNLIMITED)
-        session = Running(serial, process, pcPort, video, control, outbox)
+        track(control)
+        val queue = Channel<ByteArray>(Channel.UNLIMITED)
+        outbox = queue
+        track(Closeable { queue.close(); outbox = null })
         val header = stream.readHeader()
 
-        // Writer: one coroutine, so messages keep their order.
         val channel = ControlChannel(control.getOutputStream().buffered())
-        scope.launch(Dispatchers.IO) {
-            runCatching { for (message in outbox) channel.send(message) }
-        }
+        scope.launch(Dispatchers.IO) { runCatching { for (message in queue) channel.send(message) } }
         // Device messages (clipboard, acks) are not used yet; read them so the socket never fills up.
         Thread {
             runCatching { control.getInputStream().let { input -> val buf = ByteArray(4096); while (input.read(buf) >= 0) Unit } }
         }.apply { isDaemon = true; name = "scrcpy-control-in"; start() }
 
+        pump(stream, header, serial, controllable = true)
+    }
+
+    /** Reads and decodes until the stream ends or the job is cancelled. */
+    private suspend fun pump(stream: ScrcpyStream, header: StreamHeader, target: String, controllable: Boolean) {
         FfmpegVideoDecoder(header.codec).use { decoder ->
             while (currentCoroutineContext().isActive) {
                 when (val item = stream.read() ?: break) {
                     is StreamItem.Session ->
-                        _state.value = MirrorState.Running(serial, header.deviceName, item.width, item.height)
+                        _state.value = MirrorState.Running(target, header.deviceName, item.width, item.height, controllable)
                     is StreamItem.Packet -> decoder.decode(item)?.let { publish(it) }
                 }
             }
@@ -178,20 +262,33 @@ class MirrorController(private val scope: CoroutineScope, private val screenshot
         }
     }
 
-    private fun cleanup() {
-        val running = session ?: return
-        session = null
-        running.outbox.close()
-        runCatching { running.control.close() }
-        runCatching { running.video.close() }
-        // cleanup=true lets the server tidy up on the phone once the sockets close.
-        runCatching { running.process.destroy() }
-        runCatching { Adb.run("-s", running.serial, "forward", "--remove", "tcp:${running.pcPort}", timeoutMs = 5_000) }
+    private fun sendStop(request: Wireless) {
+        scope.launch(Dispatchers.IO) { runCatching { request.session.send(MirrorStop(request.requestId)) } }
     }
+
+    private fun fail(target: String, reason: MirrorFailure, detail: String? = null) {
+        _frame.value = null
+        _state.value = MirrorState.Failed(target, reason, detail)
+    }
+
+    private fun track(resource: Closeable) {
+        synchronized(resources) { resources += resource }
+    }
+
+    private fun cleanup() {
+        val toClose = synchronized(resources) { resources.toList().also { resources.clear() } }
+        toClose.asReversed().forEach { runCatching { it.close() } }
+    }
+
+    private fun newToken(): String = HexFormat.of().formatHex(ByteArray(16).also(SecureRandom()::nextBytes))
 
     private companion object {
         const val CONNECT_ATTEMPTS = 50
         const val CONNECT_RETRY_MS = 100L
+        /** How long the phone has to accept; matches the phone's notification timeout. */
+        const val ANSWER_TIMEOUT_MS = 90_000L
+        /** The phone repeats frames on a still screen, so a long silence means the link is gone. */
+        const val STREAM_READ_TIMEOUT_MS = 15_000
         val STAMP: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")
     }
 }

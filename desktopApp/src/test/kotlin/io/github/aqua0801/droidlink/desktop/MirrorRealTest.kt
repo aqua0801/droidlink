@@ -33,7 +33,7 @@ class MirrorRealTest {
         val mirror = MirrorController(scope, kotlin.io.path.createTempDirectory("mirror").toFile())
         try {
             runBlocking {
-                mirror.start(serial)
+                mirror.startAdb(serial)
                 val first = withTimeoutOrNull(20_000) { mirror.frame.filterNotNull().first() }
                     ?: error("no frame; state=${mirror.state.value}")
                 println("first frame ${first.width}x${first.height}, state=${mirror.state.value}")

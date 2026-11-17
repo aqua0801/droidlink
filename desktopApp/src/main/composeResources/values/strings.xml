@@ -178,6 +178,11 @@
     <string name="mirror_unpin">取消固定</string>
     <string name="mirror_shot_saved">已存檔並複製到剪貼簿</string>
     <string name="mirror_shot_failed">截圖失敗</string>
+    <string name="device_mirror">無線投影</string>
+    <string name="mirror_waiting_phone">等待手機同意投影…</string>
+    <string name="mirror_declined">手機拒絕了投影</string>
+    <string name="mirror_no_answer">手機沒有回應（請確認手機上的通知）</string>
+    <string name="mirror_view_only">無線投影只能觀看，要操控請改用 USB（加強模式）</string>
     <string name="settings_sync">同步資料夾</string>
     <string name="sync_folder_desc">這個資料夾會推送到手機。電腦是唯一來源：只會把手機缺少或內容不同的檔案覆蓋過去，手機上的修改不會傳回電腦。</string>
     <string name="sync_choose_title">選擇同步資料夾</string>

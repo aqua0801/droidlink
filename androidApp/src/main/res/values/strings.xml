@@ -169,4 +169,12 @@
     <string name="browser_delete_title">刪除 %1$d 個項目？</string>
     <string name="browser_delete_body">資料夾會連同裡面的檔案一起刪除。這裡是電腦資料夾的副本，若電腦上還有這些檔案，下次同步時會再傳回來。</string>
     <string name="browser_delete_failed">有 %1$d 個項目無法刪除</string>
+
+    <!-- Wireless mirroring -->
+    <string name="mirror_request_title">%1$s 想要投影你的畫面</string>
+    <string name="mirror_request_body">點一下開始，系統會詢問是否允許擷取螢幕</string>
+    <string name="mirror_channel_request">投影要求</string>
+    <string name="mirror_channel_active">投影中</string>
+    <string name="mirror_active">正在投影到 %1$s</string>
+    <string name="mirror_stop">停止投影</string>
 </resources>

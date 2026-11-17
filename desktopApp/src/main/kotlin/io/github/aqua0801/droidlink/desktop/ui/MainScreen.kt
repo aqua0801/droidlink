@@ -39,26 +39,27 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.aqua0801.droidlink.desktop.ClipEvent
 import io.github.aqua0801.droidlink.desktop.ConnectedDevice
+import io.github.aqua0801.droidlink.desktop.DesktopController
 import io.github.aqua0801.droidlink.desktop.DesktopSettings
-import io.github.aqua0801.droidlink.desktop.sync.SyncFailure
-import io.github.aqua0801.droidlink.desktop.sync.SyncStatus
+import io.github.aqua0801.droidlink.desktop.PairingOffer
 import io.github.aqua0801.droidlink.desktop.PcToPhoneMode
 import io.github.aqua0801.droidlink.desktop.PhoneToPcMode
-import io.github.aqua0801.droidlink.desktop.DesktopController
-import io.github.aqua0801.droidlink.desktop.PairingOffer
 import io.github.aqua0801.droidlink.desktop.ServerStatus
 import io.github.aqua0801.droidlink.desktop.TrustedPeer
+import io.github.aqua0801.droidlink.desktop.mirror.MirrorState
 import io.github.aqua0801.droidlink.desktop.resources.*
+import io.github.aqua0801.droidlink.desktop.sync.SyncFailure
+import io.github.aqua0801.droidlink.desktop.sync.SyncStatus
 import io.github.aqua0801.droidlink.shared.crypto.Fingerprint
 import io.github.aqua0801.droidlink.shared.protocol.BatteryStatus
 import io.github.aqua0801.droidlink.shared.protocol.PowerSource
-import kotlinx.coroutines.delay
-import org.jetbrains.compose.resources.StringResource
-import org.jetbrains.compose.resources.stringResource
 import java.io.File
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.delay
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun MainScreen(controller: DesktopController, onOpenSettings: () -> Unit) {
@@ -70,6 +71,7 @@ fun MainScreen(controller: DesktopController, onOpenSettings: () -> Unit) {
     val lastSent by controller.clipboard.lastSent.collectAsState()
     val lastReceived by controller.clipboard.lastReceived.collectAsState()
     val syncStatus by controller.sync.status.collectAsState()
+    val mirrorState by controller.mirror.state.collectAsState()
 
     var dropHover by remember { mutableStateOf(false) }
 
@@ -89,6 +91,11 @@ fun MainScreen(controller: DesktopController, onOpenSettings: () -> Unit) {
                             sync = syncStatus[device.fingerprint],
                             onSendFiles = { files -> controller.sendFiles(device.fingerprint, files) },
                             onSync = { controller.startSync(device.fingerprint) },
+                            mirroring = mirrorState !is MirrorState.Idle,
+                            onMirror = {
+                                if (mirrorState is MirrorState.Idle) controller.startWirelessMirror(device.fingerprint)
+                                else controller.mirror.stop()
+                            },
                         )
                     }
                 }
@@ -204,7 +211,14 @@ private fun ClipLine(label: StringResource, event: ClipEvent) {
 }
 
 @Composable
-private fun DeviceRow(device: ConnectedDevice, sync: SyncStatus?, onSendFiles: (List<File>) -> Unit, onSync: () -> Unit) {
+private fun DeviceRow(
+    device: ConnectedDevice,
+    sync: SyncStatus?,
+    onSendFiles: (List<File>) -> Unit,
+    onSync: () -> Unit,
+    mirroring: Boolean,
+    onMirror: () -> Unit,
+) {
     val dialogTitle = stringResource(Res.string.send_dialog_title)
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -213,6 +227,9 @@ private fun DeviceRow(device: ConnectedDevice, sync: SyncStatus?, onSendFiles: (
                 Text(device.address, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onMirror) {
+                    Text(stringResource(if (mirroring) Res.string.mirror_stop else Res.string.device_mirror))
+                }
                 OutlinedButton(onClick = onSync, enabled = sync !is SyncStatus.Running) {
                     Text(stringResource(Res.string.device_sync))
                 }

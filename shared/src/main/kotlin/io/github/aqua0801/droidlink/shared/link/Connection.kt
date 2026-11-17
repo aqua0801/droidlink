@@ -53,6 +53,13 @@ class Connection(private val socket: SSLSocket) : Closeable {
         }
     }
 
+    /**
+     * Leaves the framed protocol and hands over the socket for a raw stream. Only safe when
+     * the peer sends nothing past the last received frame before the switch (the reader may
+     * buffer ahead otherwise). The caller now owns the socket.
+     */
+    fun releaseSocket(): SSLSocket = socket
+
     override fun close() {
         runCatching { socket.close() }
     }

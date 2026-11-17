@@ -163,3 +163,34 @@ data class FileCancel(val id: Long) : Message()
 
 @Serializable
 enum class TransferError { DECLINED, STORAGE, TIMEOUT, CONNECTION_LOST, CHECKSUM_MISMATCH, CANCELLED, IO }
+
+// ---- Wireless screen mirroring (view only) ------------------------------------------------
+// PC -> mirror.request over the session. The phone asks the user for screen-capture consent,
+// then opens a second TLS connection to the same server port whose first frame is
+// mirror.stream (instead of hello). The PC answers mirror.ready on that connection; from then
+// on it carries the raw video stream in the scrcpy-server layout (no dummy byte; see the
+// desktop ScrcpyStream). Either side ends it with mirror.stop on the session, or by closing
+// the stream connection.
+
+@Serializable
+@SerialName("mirror.request")
+data class MirrorRequest(val requestId: Long, val token: String, val maxSize: Int) : Message()
+
+/** The user dismissed the consent dialog. */
+@Serializable
+@SerialName("mirror.declined")
+data class MirrorDeclined(val requestId: Long) : Message()
+
+@Serializable
+@SerialName("mirror.stop")
+data class MirrorStop(val requestId: Long) : Message()
+
+/** First frame on a stream connection; [token] comes from the matching [MirrorRequest]. */
+@Serializable
+@SerialName("mirror.stream")
+data class MirrorStreamHello(val token: String, val deviceName: String) : Message()
+
+/** Server reply on a stream connection; after it both sides leave the framed protocol. */
+@Serializable
+@SerialName("mirror.ready")
+data class MirrorReady(val ok: Boolean = true) : Message()

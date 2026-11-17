@@ -14,7 +14,20 @@ interface VideoDecoder : Closeable {
 /** What the mirror window is showing. */
 sealed interface MirrorState {
     data object Idle : MirrorState
-    data class Starting(val serial: String) : MirrorState
-    data class Running(val serial: String, val deviceName: String, val width: Int, val height: Int) : MirrorState
-    data class Failed(val serial: String, val reason: String) : MirrorState
+    /** [waitingForPhone]: wireless request sent, the user still has to accept on the phone. */
+    data class Starting(val target: String, val waitingForPhone: Boolean = false) : MirrorState
+
+    /** [controllable] is false for wireless mirroring (view only). */
+    data class Running(
+        val target: String,
+        val deviceName: String,
+        val width: Int,
+        val height: Int,
+        val controllable: Boolean = true,
+    ) : MirrorState
+
+    data class Failed(val target: String, val reason: MirrorFailure, val detail: String? = null) : MirrorState
+}
+
+enum class MirrorFailure { ERROR, DECLINED, NO_ANSWER
 }

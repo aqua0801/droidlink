@@ -15,6 +15,9 @@ import io.github.aqua0801.droidlink.shared.link.ServerIdentityMismatchException
 import io.github.aqua0801.droidlink.shared.pairing.PairingInfo
 import io.github.aqua0801.droidlink.shared.protocol.ClipboardText
 import io.github.aqua0801.droidlink.shared.protocol.Message
+import io.github.aqua0801.droidlink.shared.protocol.MirrorRequest
+import io.github.aqua0801.droidlink.shared.protocol.MirrorStop
+import io.github.aqua0801.droidlink.shared.protocol.MirrorStreamHello
 import io.github.aqua0801.droidlink.shared.protocol.RejectReason
 import io.github.aqua0801.droidlink.shared.protocol.SyncDelete
 import io.github.aqua0801.droidlink.shared.protocol.SyncDeleted
@@ -33,13 +36,14 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicInteger
+import javax.net.ssl.SSLSocket
 
 sealed interface LinkState {
     data object Idle : LinkState
@@ -100,6 +104,17 @@ class LinkManager(private val context: Context, private val graph: AppGraph) {
         synchronized(this) {
             loopJob = scope.launch { connectLoop(gen, fingerprint) }
         }
+    }
+
+    /**
+     * Opens an extra connection to the connected PC for a raw stream (wireless mirroring),
+     * at the same address and port as the session, with the same pinned certificate.
+     */
+    suspend fun openStream(hello: MirrorStreamHello): SSLSocket {
+        val connected = _state.value as? LinkState.Connected ?: throw IOException("not connected")
+        val pc = graph.pairedPcs.pcs.value.firstOrNull { it.fingerprint == connected.fingerprint }
+            ?: throw IOException("unknown PC")
+        return client.openStream(connected.host, pc.port, Fingerprint(pc.fingerprint), hello)
     }
 
     /** Starts over after the retries ran out; does nothing in any other state. */
@@ -298,6 +313,8 @@ class LinkManager(private val context: Context, private val graph: AppGraph) {
                 val (deleted, failed) = graph.syncFolder.delete(message.paths)
                 runCatching { session.send(SyncDeleted(message.requestId, deleted, failed)) }
             }
+            is MirrorRequest -> graph.mirror.onRequest(session.peerName, message)
+            is MirrorStop -> graph.mirror.onStop(message)
             is SyncDone -> graph.settings.setLastSync(
                 LastSync(System.currentTimeMillis(), message.updated, message.unchanged, message.deleted, message.failed),
             )

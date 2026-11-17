@@ -111,7 +111,7 @@ fun EnhancedSection(controller: DesktopController) {
             val mirrorState by controller.mirror.state.collectAsState()
             val mirroring = mirrorState !is MirrorState.Idle
             OutlinedButton(onClick = {
-                if (mirroring) controller.mirror.stop() else controller.mirror.start(connected.serial)
+                if (mirroring) controller.mirror.stop() else controller.mirror.startAdb(connected.serial)
             }) {
                 Text(stringResource(if (mirroring) Res.string.mirror_stop else Res.string.mirror_start))
             }

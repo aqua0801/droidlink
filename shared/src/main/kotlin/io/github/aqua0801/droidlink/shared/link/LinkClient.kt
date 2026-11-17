@@ -7,6 +7,8 @@ import io.github.aqua0801.droidlink.shared.crypto.PinnedTrustManager
 import io.github.aqua0801.droidlink.shared.crypto.Tls
 import io.github.aqua0801.droidlink.shared.crypto.findPeerNotTrusted
 import io.github.aqua0801.droidlink.shared.protocol.Hello
+import io.github.aqua0801.droidlink.shared.protocol.MirrorReady
+import io.github.aqua0801.droidlink.shared.protocol.MirrorStreamHello
 import io.github.aqua0801.droidlink.shared.protocol.PROTOCOL_VERSION
 import io.github.aqua0801.droidlink.shared.protocol.RejectReason
 import io.github.aqua0801.droidlink.shared.protocol.Rejected
@@ -17,6 +19,7 @@ import kotlinx.coroutines.withContext
 import java.io.EOFException
 import java.io.IOException
 import javax.net.ssl.SSLException
+import javax.net.ssl.SSLSocket
 
 /** The server answered with [Rejected]. */
 class LinkRejectedException(val reason: RejectReason) : IOException("rejected by server: $reason")
@@ -74,6 +77,32 @@ class LinkClient(
                 null -> throw EOFException("server closed the connection")
                 else -> throw IOException("unexpected reply: ${reply::class.simpleName}")
             }
+        } catch (e: Throwable) {
+            runCatching { socket.close() }
+            throw e
+        }
+    }
+
+    /**
+     * Opens an extra connection for a raw stream: sends [hello] as the first frame and waits
+     * for [MirrorReady]. The returned socket has left the framed protocol; the caller owns it.
+     */
+    suspend fun openStream(
+        host: String,
+        port: Int,
+        expectedServer: Fingerprint,
+        hello: MirrorStreamHello,
+        connectTimeoutMs: Int = 4_000,
+    ): SSLSocket = withContext(Dispatchers.IO) {
+        val context = Tls.context(identity, PinnedTrustManager { it == expectedServer })
+        val socket = Tls.connect(context, host, port, connectTimeoutMs, DroidLinkDefaults.HANDSHAKE_TIMEOUT_MS)
+        try {
+            val connection = Connection(socket)
+            connection.send(hello)
+            val reply = connection.receive()
+            if (reply !is MirrorReady) throw IOException("stream refused: ${reply?.let { it::class.simpleName }}")
+            socket.soTimeout = 0
+            connection.releaseSocket()
         } catch (e: Throwable) {
             runCatching { socket.close() }
             throw e

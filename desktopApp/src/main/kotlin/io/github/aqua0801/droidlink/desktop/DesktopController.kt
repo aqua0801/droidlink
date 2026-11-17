@@ -25,11 +25,14 @@ import io.github.aqua0801.droidlink.shared.crypto.IdentityFile
 import io.github.aqua0801.droidlink.shared.link.LinkServer
 import io.github.aqua0801.droidlink.shared.link.LinkSession
 import io.github.aqua0801.droidlink.shared.link.MessageHandler
+import io.github.aqua0801.droidlink.shared.link.StreamListener
 import io.github.aqua0801.droidlink.shared.pairing.PairingInfo
 import io.github.aqua0801.droidlink.shared.pairing.PairingTokens
 import io.github.aqua0801.droidlink.shared.protocol.BatteryStatus
 import io.github.aqua0801.droidlink.shared.protocol.ClipboardText
 import io.github.aqua0801.droidlink.shared.protocol.FileKind
+import io.github.aqua0801.droidlink.shared.protocol.MirrorDeclined
+import io.github.aqua0801.droidlink.shared.protocol.MirrorStop
 import io.github.aqua0801.droidlink.desktop.mirror.MirrorController
 import io.github.aqua0801.droidlink.desktop.sync.DesktopSync
 import io.github.aqua0801.droidlink.desktop.sync.SyncFolderScanner
@@ -117,6 +120,12 @@ class DesktopController(
         sync.start(fingerprint, session)
     }
 
+    /** Wireless, view-only mirroring of one connected phone; the phone asks its user first. */
+    fun startWirelessMirror(fingerprint: Fingerprint) {
+        val session = sessions[fingerprint] ?: return
+        mirror.startWireless(session)
+    }
+
     fun resetSyncFolder() {
         settings.update { it.copy(sync = it.sync.copy(folder = null)) }
     }
@@ -171,6 +180,9 @@ class DesktopController(
                     trust = trustedPeers,
                     pairing = tokens,
                     listener = ::onSessionOpened,
+                    streams = StreamListener { connection, hello ->
+                        if (!mirror.onStream(connection, hello)) connection.close()
+                    },
                     scope = scope,
                 )
                 linkServer.start()
@@ -283,6 +295,8 @@ class DesktopController(
             when (message) {
                 is BatteryStatus -> onBattery(fingerprint, session.peerName, message)
                 is ClipboardText -> clipboardRouting.onPhoneText(message.text)
+                is MirrorDeclined -> mirror.onDeclined(message.requestId)
+                is MirrorStop -> mirror.onPhoneStopped(message.requestId)
                 else -> Unit
             }
         }

@@ -12,6 +12,7 @@ import io.github.aqua0801.droidlink.clipboard.ClipboardBridge
 import io.github.aqua0801.droidlink.data.DeviceInfo
 import io.github.aqua0801.droidlink.data.PairedPcStore
 import io.github.aqua0801.droidlink.data.PhoneSettings
+import io.github.aqua0801.droidlink.mirror.PhoneMirror
 import io.github.aqua0801.droidlink.screenshot.ScreenshotWatcher
 import io.github.aqua0801.droidlink.sync.PhoneSyncFolder
 import io.github.aqua0801.droidlink.link.LinkManager
@@ -62,6 +63,7 @@ class AppGraph(app: Application) {
     val syncFolder = PhoneSyncFolder(app, settings)
     val files = PhoneFileTransfers(app, this)
     val screenshots = ScreenshotWatcher(app, this)
+    val mirror = PhoneMirror(app, this)
 }
 
 val Context.graph: AppGraph get() = (applicationContext as DroidLinkApp).graph

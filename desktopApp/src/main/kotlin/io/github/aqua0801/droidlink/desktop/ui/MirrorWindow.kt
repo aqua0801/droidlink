@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.rememberWindowState
 import io.github.aqua0801.droidlink.desktop.mirror.MirrorController
+import io.github.aqua0801.droidlink.desktop.mirror.MirrorFailure
 import io.github.aqua0801.droidlink.desktop.mirror.MirrorState
 import io.github.aqua0801.droidlink.desktop.mirror.ScrcpyControl
 import io.github.aqua0801.droidlink.desktop.platform.ImageClipboard
@@ -64,8 +65,10 @@ import io.github.aqua0801.droidlink.desktop.resources.ic_screen_rotation
 import io.github.aqua0801.droidlink.desktop.resources.ic_volume_down
 import io.github.aqua0801.droidlink.desktop.resources.ic_volume_up
 import io.github.aqua0801.droidlink.desktop.resources.mirror_back
+import io.github.aqua0801.droidlink.desktop.resources.mirror_declined
 import io.github.aqua0801.droidlink.desktop.resources.mirror_failed
 import io.github.aqua0801.droidlink.desktop.resources.mirror_home
+import io.github.aqua0801.droidlink.desktop.resources.mirror_no_answer
 import io.github.aqua0801.droidlink.desktop.resources.mirror_pin
 import io.github.aqua0801.droidlink.desktop.resources.mirror_power
 import io.github.aqua0801.droidlink.desktop.resources.mirror_recents
@@ -77,7 +80,9 @@ import io.github.aqua0801.droidlink.desktop.resources.mirror_starting
 import io.github.aqua0801.droidlink.desktop.resources.mirror_title
 import io.github.aqua0801.droidlink.desktop.resources.mirror_unpin
 import io.github.aqua0801.droidlink.desktop.resources.mirror_volume_down
+import io.github.aqua0801.droidlink.desktop.resources.mirror_view_only
 import io.github.aqua0801.droidlink.desktop.resources.mirror_volume_up
+import io.github.aqua0801.droidlink.desktop.resources.mirror_waiting_phone
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -90,9 +95,10 @@ import java.awt.datatransfer.DataFlavor
 private val ToolbarHeight = 48.dp
 
 /**
- * Phone screen in its own window, with control: left click / drag = touch, right click =
+ * Phone screen in its own window. Over ADB it has control: left click / drag = touch, right click =
  * back, middle click = home, wheel = scroll, typing goes to the focused field, Ctrl+V pastes
- * the PC clipboard. The picture keeps its aspect ratio; on rotation the window is reshaped.
+ * the PC clipboard. Wireless mirroring is view only (screenshot and pin remain). The picture
+ * keeps its aspect ratio; on rotation the window is reshaped.
  */
 @Composable
 fun MirrorWindow(mirror: MirrorController, dark: Boolean) {
@@ -105,6 +111,8 @@ fun MirrorWindow(mirror: MirrorController, dark: Boolean) {
     val scope = rememberCoroutineScope()
 
     val running = state as? MirrorState.Running
+    // Wireless sessions are view only; until the first frame, assume nothing is controllable.
+    val controllable = running?.controllable == true
     LaunchedEffect(running?.width, running?.height) {
         if (running == null || running.width <= 0 || running.height <= 0) return@LaunchedEffect
         // Keep the current height (or width, for landscape) and fit the other side to the video.
@@ -125,6 +133,7 @@ fun MirrorWindow(mirror: MirrorController, dark: Boolean) {
 
     val title = when (val s = state) {
         is MirrorState.Running -> stringResource(Res.string.mirror_title, s.deviceName)
+        is MirrorState.Starting -> stringResource(if (s.waitingForPhone) Res.string.mirror_waiting_phone else Res.string.mirror_starting)
         else -> stringResource(Res.string.mirror_starting)
     }
     Window(
@@ -133,13 +142,13 @@ fun MirrorWindow(mirror: MirrorController, dark: Boolean) {
         title = title,
         icon = AppIcon,
         alwaysOnTop = pinned,
-        onKeyEvent = { event -> handleKey(mirror, event) },
+        onKeyEvent = { event -> controllable && handleKey(mirror, event) },
     ) {
         DroidLinkDesktopTheme(dark) {
             Column(modifier = Modifier.fillMaxSize().background(Color.Black)) {
                 Box(
                     modifier = Modifier.weight(1f).fillMaxWidth().then(
-                        if (running != null) Modifier.pointerInput(running.width, running.height) { handlePointer(mirror, running) } else Modifier,
+                        if (running != null && controllable) Modifier.pointerInput(running.width, running.height) { handlePointer(mirror, running) } else Modifier,
                     ),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -153,13 +162,13 @@ fun MirrorWindow(mirror: MirrorController, dark: Boolean) {
                             modifier = Modifier.fillMaxSize(),
                         )
                         state is MirrorState.Failed -> Text(
-                            stringResource(Res.string.mirror_failed, (state as MirrorState.Failed).reason),
+                            failureText(state as MirrorState.Failed),
                             color = MaterialTheme.colorScheme.error,
                             modifier = Modifier.padding(24.dp),
                         )
                         else -> Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             CircularProgressIndicator()
-                            Text(stringResource(Res.string.mirror_starting), color = Color.White)
+                            Text(title, color = Color.White)
                         }
                     }
                     notice?.let {
@@ -179,6 +188,7 @@ fun MirrorWindow(mirror: MirrorController, dark: Boolean) {
                 }
                 Surface(modifier = Modifier.fillMaxWidth().height(ToolbarHeight), tonalElevation = 2.dp) {
                     Row(horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                        if (controllable) {
                         IconAction(Res.drawable.ic_arrow_back, stringResource(Res.string.mirror_back), { mirror.pressKey(ScrcpyControl.KEYCODE_BACK) })
                         IconAction(Res.drawable.ic_home, stringResource(Res.string.mirror_home), { mirror.pressKey(ScrcpyControl.KEYCODE_HOME) })
                         IconAction(Res.drawable.ic_apps, stringResource(Res.string.mirror_recents), { mirror.pressKey(ScrcpyControl.KEYCODE_APP_SWITCH) })
@@ -186,6 +196,14 @@ fun MirrorWindow(mirror: MirrorController, dark: Boolean) {
                         IconAction(Res.drawable.ic_volume_up, stringResource(Res.string.mirror_volume_up), { mirror.pressKey(ScrcpyControl.KEYCODE_VOLUME_UP) })
                         IconAction(Res.drawable.ic_power_settings_new, stringResource(Res.string.mirror_power), { mirror.pressKey(ScrcpyControl.KEYCODE_POWER) })
                         IconAction(Res.drawable.ic_screen_rotation, stringResource(Res.string.mirror_rotate), { mirror.send(ScrcpyControl.rotateDevice()) })
+                        } else if (running != null) {
+                            Text(
+                                stringResource(Res.string.mirror_view_only),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
+                            )
+                        }
                         IconAction(Res.drawable.ic_photo_camera, stringResource(Res.string.mirror_screenshot), {
                             scope.launch {
                                 val saved = withContext(Dispatchers.IO) { mirror.saveScreenshot()?.also { ImageClipboard.copy(it) } }
@@ -202,6 +220,13 @@ fun MirrorWindow(mirror: MirrorController, dark: Boolean) {
             }
         }
     }
+}
+
+@Composable
+private fun failureText(failed: MirrorState.Failed): String = when (failed.reason) {
+    MirrorFailure.DECLINED -> stringResource(Res.string.mirror_declined)
+    MirrorFailure.NO_ANSWER -> stringResource(Res.string.mirror_no_answer)
+    MirrorFailure.ERROR -> stringResource(Res.string.mirror_failed, failed.detail.orEmpty())
 }
 
 /** Maps pointer positions in the view to video-frame pixels (the picture is letterboxed). */

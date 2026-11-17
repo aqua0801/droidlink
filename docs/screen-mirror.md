@@ -35,6 +35,21 @@
 - [x] 投影視窗：左鍵點擊/拖曳、右鍵返回、中鍵主畫面、滾輪、鍵盤（特殊鍵→keycode，可列印字元→文字，Ctrl+V 貼上電腦剪貼簿）、工具列（返回/主畫面/多工/音量/電源/旋轉/截圖/置頂）。
 - [ ] 已知限制：輸入法組字（注音等）不會轉送，中文請用 Ctrl+V 貼上。
 
+## 第 3 階段（無線投影，只看）
+
+流程：
+1. 電腦在既有 session 送 `MirrorRequest(requestId, token, maxSize)`。
+2. 手機發高優先通知（Android 不允許背景直接開 Activity），點開 → `MirrorConsentActivity` → 系統的 MediaProjection 同意框。
+3. 同意後啟動 `MirrorCaptureService`（foreground, type=mediaProjection），對同一個 port 47100 再開一條 TLS 連線，第一個訊息是 `MirrorStreamHello(token)`。
+4. `LinkServer` 看到 `MirrorStreamHello` 就不走配對流程：只接受已信任的指紋，交給 `MirrorController.onStream` 比對 token 和指紋，回 `MirrorReady`，之後這條 socket 改成原始位元組串流。
+5. 手機用 MediaCodec（H.264，8 Mbps，60 fps）照 scrcpy 的串流格式寫出（沒有 dummy byte），電腦沿用 `ScrcpyStream(forwardTunnel = false)` + FFmpeg 解碼。
+6. 拒絕 → `MirrorDeclined`；任一邊停止 → `MirrorStop`；手機 90 秒沒回應 → 電腦顯示「沒有回應」。
+
+- [x] 協定訊息、`LinkServer` 的 stream 分流、`LinkClient.openStream`、測試。
+- [x] 手機：通知 → 同意 → 前景服務 → 編碼；旋轉時重設 VirtualDisplay 大小；通知上有「停止投影」。
+- [x] 電腦：裝置列「無線投影」按鈕；投影視窗只留截圖和置頂。
+- [ ] 實機驗證。
+
 ## 備忘
 
 - server 的版本字串必須和 jar 完全一致，否則拒絕啟動。升級 scrcpy 時要重看 `doc/develop.md` 的 Protocol 一節（協定會隨版本變動）。
