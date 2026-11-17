@@ -2,13 +2,14 @@ package io.github.aqua0801.droidlink.data
 
 import android.content.Context
 import androidx.core.content.edit
+import io.github.aqua0801.droidlink.shared.settings.AppLanguage
 import io.github.aqua0801.droidlink.shared.settings.ThemeMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class PhoneSettings(context: Context) {
-    private val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+    private val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
     /** A boolean preference exposed as a flow. */
     inner class Toggle(private val key: String, default: Boolean) {
@@ -23,7 +24,7 @@ class PhoneSettings(context: Context) {
 
     val clipboardReceive = Toggle("clipboard_receive", true)
 
-    /** "已傳送" toast after sending text from the selection menu, share sheet or tile. */
+    /** "Sent" toast after sending text from the selection menu, share sheet or tile. */
     val notifyClipboardSent = Toggle("notify_clipboard_sent", true)
 
     /** Result toast after sharing files to DroidLink from another app. */
@@ -60,10 +61,29 @@ class PhoneSettings(context: Context) {
         prefs.edit { putString(KEY_THEME, mode.name) }
     }
 
-    private companion object {
-        const val KEY_THEME = "theme"
-        const val KEY_SYNC_TREE = "sync_tree_uri"
-        const val KEY_LAST_SYNC = "sync_last"
+    private val _language = MutableStateFlow(AppLanguage.parse(prefs.getString(KEY_LANGUAGE, null)))
+    /** Apply changes through AppLocales, which also updates the platform setting. */
+    val language: StateFlow<AppLanguage> = _language.asStateFlow()
+
+    /** False until a language has been stored (first run). */
+    val hasLanguage: Boolean get() = prefs.contains(KEY_LANGUAGE)
+
+    fun setLanguage(language: AppLanguage) {
+        _language.value = language
+        prefs.edit { putString(KEY_LANGUAGE, language.name) }
+    }
+
+    companion object {
+        private const val PREFS = "settings"
+        private const val KEY_LANGUAGE = "language"
+
+        /** For contexts created before the app graph (attachBaseContext). */
+        fun readLanguage(context: Context): AppLanguage =
+            AppLanguage.parse(context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_LANGUAGE, null))
+
+        private const val KEY_THEME = "theme"
+        private const val KEY_SYNC_TREE = "sync_tree_uri"
+        private const val KEY_LAST_SYNC = "sync_last"
     }
 }
 

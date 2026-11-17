@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Traditional Chinese. The default (English) strings are in values/strings.xml. -->
+<resources>
+    <string name="send_to_pc">傳到電腦</string>
+    <string name="theme_button">主題：%1$s</string>
+    <string name="theme_system">跟隨系統</string>
+    <string name="theme_light">淺色</string>
+    <string name="theme_dark">深色</string>
+    <string name="settings_language">語言</string>
+    <string name="language_system">跟隨系統</string>
+    <string name="tile_label">傳送剪貼簿</string>
+
+    <!-- Connection status -->
+    <string name="status_idle">未連線</string>
+    <string name="status_pairing">正在與 %1$s 配對…</string>
+    <string name="status_connecting">正在連線到 %1$s</string>
+    <string name="status_connecting_attempt">第 %1$d 次嘗試</string>
+    <string name="status_connecting_attempt_error">第 %1$d 次嘗試 · %2$s</string>
+    <string name="status_connected">已連線到 %1$s</string>
+    <string name="status_connected_via">經由 %1$s</string>
+    <string name="action_disconnect">中斷</string>
+
+    <!-- Pairing -->
+    <string name="action_scan">掃描 QR 碼配對電腦</string>
+    <string name="scan_prompt">掃描電腦端 DroidLink 顯示的 QR 碼</string>
+    <string name="event_not_pairing_qr">這不是 DroidLink 的配對 QR 碼</string>
+    <string name="event_paired">已與 %1$s 配對</string>
+    <string name="event_pair_failed">配對失敗：%1$s</string>
+
+    <!-- Paired PCs -->
+    <string name="section_paired">已配對的電腦</string>
+    <string name="paired_empty">還沒有配對任何電腦。在電腦端按「產生配對 QR 碼」，再用上面的按鈕掃描。</string>
+    <string name="pc_addresses">位址：%1$s</string>
+    <string name="action_connect">連線</string>
+    <string name="action_in_use">使用中</string>
+    <string name="action_manual_host">手動位址</string>
+    <string name="action_forget">移除</string>
+    <string name="manual_host_title">手動位址</string>
+    <string name="manual_host_message">不在同一個區網時（例如走 Tailscale），輸入電腦的 MagicDNS 名稱或 IP。留空即可清除。</string>
+    <string name="action_save">儲存</string>
+    <string name="action_cancel">取消</string>
+    <string name="own_fingerprint">本機指紋　%1$s</string>
+    <string name="own_fingerprint_pending">本機指紋　產生中…</string>
+
+    <!-- Connection errors -->
+    <string name="error_cannot_connect">無法連線</string>
+    <string name="error_no_address">沒有可用的位址</string>
+    <string name="error_wrong_host">%1$s 不是這台電腦</string>
+    <string name="error_host">%1$s：%2$s</string>
+    <string name="error_connection_lost">連線中斷</string>
+    <string name="reject_not_paired">電腦已不再信任這支手機，請重新配對</string>
+    <string name="reject_bad_token">配對碼無效或已過期，請在電腦上重新產生 QR 碼</string>
+    <string name="reject_protocol">手機與電腦的 DroidLink 版本不相容</string>
+
+    <!-- Clipboard -->
+    <string name="section_clipboard">剪貼簿</string>
+    <string name="clip_receive">接收電腦傳來的剪貼簿</string>
+    <string name="clip_send_now">立即傳送剪貼簿</string>
+    <string name="clip_hint">在其他 App 選取文字後選「傳到電腦」，或用分享選單、快速設定的「傳送剪貼簿」，把內容傳到電腦。一般的複製不會同步。電腦開啟 ADB 增強模式時，也可以直接在電腦按快捷鍵拉取手機的剪貼簿。</string>
+    <string name="clip_sent">已把剪貼簿傳到電腦</string>
+    <string name="clip_not_connected">尚未連線到電腦</string>
+    <string name="clip_empty">剪貼簿沒有文字</string>
+    <string name="clip_too_large">文字太長，無法傳送</string>
+    <string name="clip_failed">傳送失敗</string>
+    <string name="clip_last_sent">最近傳送：%1$s</string>
+    <string name="clip_last_received">最近接收：%1$s</string>
+
+    <!-- Background / service -->
+    <string name="battery_opt_message">系統可能會在背景關閉 DroidLink，讓連線中斷。建議允許它不受電池最佳化限制。</string>
+    <string name="battery_opt_action">允許背景執行</string>
+    <string name="notif_channel_link">連線狀態</string>
+    <string name="notif_preparing">準備中…</string>
+
+    <!-- File transfer -->
+    <string name="send_files_to_pc">傳送檔案到電腦</string>
+    <string name="section_files">檔案傳輸</string>
+    <string name="files_pick">選擇檔案傳到電腦</string>
+    <string name="files_hint">收到的檔案存在「下載/DroidLink」。在其他 App 也能用分享選單的「傳送檔案到電腦」。</string>
+    <string name="files_clear">清除已完成</string>
+    <string name="files_not_connected">尚未連線到電腦</string>
+    <plurals name="files_sending">
+        <item quantity="other">開始傳送 %1$d 個檔案</item>
+    </plurals>
+    <plurals name="files_unreadable_some">
+        <item quantity="other">（%1$d 個檔案無法讀取）</item>
+    </plurals>
+    <string name="files_unreadable_all">無法讀取所選的檔案</string>
+    <string name="files_received_title">已收到檔案</string>
+    <string name="files_received_body">%1$s（來自 %2$s）</string>
+    <string name="notif_channel_files">檔案傳輸</string>
+
+    <string name="transfer_to">傳送至 %1$s</string>
+    <string name="transfer_from">來自 %1$s</string>
+    <string name="transfer_waiting">等待對方接收…</string>
+    <string name="transfer_progress">%1$s / %2$s</string>
+    <string name="transfer_sent">已傳送 · %1$s</string>
+    <string name="transfer_saved">已儲存 · %1$s</string>
+    <string name="transfer_cancelled">已取消</string>
+    <string name="transfer_failed">失敗：%1$s</string>
+    <string name="transfer_cancel">取消</string>
+    <string name="transfer_open">開啟</string>
+    <string name="transfer_no_viewer">沒有可以開啟這個檔案的 App</string>
+
+    <string name="error_declined">對方拒絕接收</string>
+    <string name="error_storage">儲存空間不足或無法寫入</string>
+    <string name="error_timeout">對方沒有回應</string>
+    <string name="error_checksum">檔案驗證失敗</string>
+    <string name="error_cancelled">已取消</string>
+    <string name="error_io">讀寫錯誤</string>
+
+    <!-- Reconnect limit -->
+    <string name="status_gave_up">已中斷與 %1$s 的連線</string>
+    <string name="status_gave_up_hint">自動重試已停止。電腦回到同一個網路時會自動接上，也可以手動重新連線。</string>
+    <string name="action_reconnect">重新連線</string>
+    <string name="notif_gave_up">已中斷與 %1$s 的連線，點一下重新連線</string>
+
+    <!-- Settings -->
+    <string name="settings_title">設定</string>
+    <string name="settings_back">返回</string>
+    <string name="settings_appearance">外觀</string>
+    <string name="settings_notifications">提示</string>
+    <string name="clip_receive_desc">電腦複製或推送時，寫入手機剪貼簿</string>
+    <string name="notify_clip_sent">剪貼簿傳送成功提示</string>
+    <string name="notify_clip_sent_desc">從選取選單、分享或快速設定傳到電腦後，顯示「已傳送」</string>
+    <string name="notify_files_sent">檔案傳送提示</string>
+    <string name="notify_files_sent_desc">從其他 App 分享檔案到 DroidLink 後，顯示傳送中的提示</string>
+    <string name="notify_file_received">收到檔案通知</string>
+    <string name="notify_file_received_desc">電腦傳來的檔案存好後，跳出通知可直接開啟</string>
+    <string name="notify_errors_hint">失敗或需要處理的提示（例如尚未連線）一律會顯示。</string>
+
+    <!-- Screenshots -->
+    <string name="section_screenshot">截圖</string>
+    <string name="screenshot_send">截圖自動傳到電腦</string>
+    <string name="screenshot_send_desc">連線中截圖時，自動把截圖傳給電腦，電腦會跳出預覽</string>
+    <string name="screenshot_access_title">截圖傳送需要相片權限</string>
+    <string name="screenshot_access_body">用來偵測新的截圖。請選「全部允許」；只允許部分相片時偵測不到新截圖。</string>
+    <string name="screenshot_access_denied">權限被拒絕了，請到系統設定的「權限」開啟相片與影片存取。</string>
+    <string name="screenshot_access_missing">尚未取得相片權限，截圖不會傳送</string>
+    <string name="action_allow">允許</string>
+    <string name="action_open_system_settings">前往系統設定</string>
+    <string name="action_turn_off">關閉此功能</string>
+
+    <!-- Sync folder -->
+    <string name="sync_title">同步資料夾</string>
+    <string name="sync_not_set">選一個資料夾來放電腦同步過來的檔案。裡面的圖片不會出現在相簿。</string>
+    <string name="sync_choose">選擇資料夾</string>
+    <string name="sync_change">變更資料夾</string>
+    <string name="sync_folder">資料夾：%1$s</string>
+    <string name="sync_browse">瀏覽</string>
+    <string name="sync_never">尚未同步過</string>
+    <string name="sync_last">上次同步 %1$s：更新 %2$d、刪除 %3$d</string>
+    <string name="sync_hint">在電腦端按「同步資料夾」開始同步。這裡是電腦資料夾的唯讀副本，在手機上的修改不會傳回電腦，下次同步時可能被覆蓋。</string>
+    <string name="browser_empty">資料夾是空的</string>
+    <string name="browser_share">分享</string>
+    <string name="browser_refresh">重新整理</string>
+
+    <!-- Viewer -->
+    <string name="viewer_open_with">用其他 App 開啟</string>
+    <string name="viewer_position">%1$d / %2$d</string>
+    <string name="viewer_text_truncated">檔案較大，只顯示前 %1$s</string>
+    <string name="viewer_load_failed">無法開啟這個檔案</string>
+    <string name="viewer_pdf_page">第 %1$d 頁，共 %2$d 頁</string>
+    <string name="browser_grid">格狀檢視</string>
+    <string name="browser_list">清單檢視</string>
+
+    <!-- Browser selection / delete -->
+    <string name="browser_delete">刪除</string>
+    <string name="browser_select_all">全選</string>
+    <string name="browser_cancel_selection">取消選取</string>
+    <string name="browser_selected">已選取 %1$d 項</string>
+    <plurals name="browser_delete_title">
+        <item quantity="other">刪除 %1$d 個項目？</item>
+    </plurals>
+    <string name="browser_delete_body">資料夾會連同裡面的檔案一起刪除。這裡是電腦資料夾的副本，若電腦上還有這些檔案，下次同步時會再傳回來。</string>
+    <plurals name="browser_delete_failed">
+        <item quantity="other">有 %1$d 個項目無法刪除</item>
+    </plurals>
+
+    <!-- Wireless mirroring -->
+    <string name="mirror_request_title">%1$s 想要投影你的畫面</string>
+    <string name="mirror_request_body">點一下開始，系統會詢問是否允許擷取螢幕</string>
+    <string name="mirror_channel_request">投影要求</string>
+    <string name="mirror_channel_active">投影中</string>
+    <string name="mirror_active">正在投影到 %1$s</string>
+    <string name="mirror_stop">停止投影</string>
+</resources>

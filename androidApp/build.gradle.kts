@@ -33,6 +33,15 @@ android {
         compose = true
         buildConfig = true
     }
+    bundle {
+        // The language is switched inside the app, so every language must be in the install.
+        language { enableSplit = false }
+    }
+    androidResources {
+        // Lists the app's languages for the system per-app language setting (Android 13+).
+        // The default locale is declared in src/main/res/resources.properties.
+        generateLocaleConfig = true
+    }
     packaging {
         resources {
             // BouncyCastle's multi-release jars all ship this file.

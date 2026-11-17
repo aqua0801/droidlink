@@ -12,6 +12,7 @@ import io.github.aqua0801.droidlink.clipboard.ClipboardBridge
 import io.github.aqua0801.droidlink.data.DeviceInfo
 import io.github.aqua0801.droidlink.data.PairedPcStore
 import io.github.aqua0801.droidlink.data.PhoneSettings
+import io.github.aqua0801.droidlink.i18n.AppLocales
 import io.github.aqua0801.droidlink.mirror.PhoneMirror
 import io.github.aqua0801.droidlink.screenshot.ScreenshotWatcher
 import io.github.aqua0801.droidlink.sync.PhoneSyncFolder
@@ -29,9 +30,14 @@ class DroidLinkApp : Application(), SingletonImageLoader.Factory {
     lateinit var graph: AppGraph
         private set
 
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(AppLocales.wrap(base))
+    }
+
     override fun onCreate() {
         super.onCreate()
         graph = AppGraph(this)
+        AppLocales.init(this, graph.settings)
     }
 
     /** Coil loader shared by thumbnails and the image viewer; also decodes video frames and animated GIF/WebP. */

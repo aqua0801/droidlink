@@ -31,13 +31,16 @@ import io.github.aqua0801.droidlink.desktop.ui.isDarkTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import io.github.aqua0801.droidlink.shared.settings.AppLanguage
 import kotlinx.coroutines.cancel
 import org.jetbrains.compose.resources.stringResource
+import java.util.Locale
 
 fun main() {
     val trayState = TrayState()
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     val controller = DesktopController(appScope, ComposeTrayNotifier(trayState))
+    UiLocale.apply(controller.settings.settings.value.language)
     controller.start()
 
     application {
@@ -49,54 +52,71 @@ fun main() {
             exitApplication()
         }
         val trayAvailable = isTraySupported
-        val appName = stringResource(Res.string.app_name)
         val settings by controller.settings.settings.collectAsState()
         val dark = isDarkTheme(settings.theme)
+        // Kept outside key() so a language switch doesn't move or resize the main window.
+        val mainWindowState = rememberWindowState(width = 560.dp, height = 880.dp)
 
-        if (trayAvailable) {
-            Tray(
-                icon = AppIcon,
-                state = trayState,
-                tooltip = appName,
-                onAction = { windowVisible = true },
-                menu = {
-                    Item(stringResource(Res.string.tray_show), onClick = { windowVisible = true })
-                    Item(stringResource(Res.string.tray_settings), onClick = {
-                        showSettings = true
-                        windowVisible = true
-                    })
-                    Separator()
-                    Item(stringResource(Res.string.tray_quit), onClick = quit)
-                },
-            )
-        }
+        // Resources resolve against the JVM default locale; key() recomposes every window and
+        // the tray with the new strings when the language changes.
+        val language = remember(settings.language) { UiLocale.apply(settings.language); settings.language }
+        key(language) {
+            val appName = stringResource(Res.string.app_name)
 
-        MirrorWindow(controller.mirror, dark)
-
-        val shot by controller.screenshot.collectAsState()
-        shot?.let { notice ->
-            key(notice.id) {
-                ScreenshotPopup(notice, dark, onDismiss = { controller.dismissScreenshot(notice.id) })
+            if (trayAvailable) {
+                Tray(
+                    icon = AppIcon,
+                    state = trayState,
+                    tooltip = appName,
+                    onAction = { windowVisible = true },
+                    menu = {
+                        Item(stringResource(Res.string.tray_show), onClick = { windowVisible = true })
+                        Item(stringResource(Res.string.tray_settings), onClick = {
+                            showSettings = true
+                            windowVisible = true
+                        })
+                        Separator()
+                        Item(stringResource(Res.string.tray_quit), onClick = quit)
+                    },
+                )
             }
-        }
 
-        Window(
-            // With a tray icon, closing the window keeps the server running in the background.
-            onCloseRequest = { if (trayAvailable) windowVisible = false else quit() },
-            visible = windowVisible,
-            title = appName,
-            icon = AppIcon,
-            state = rememberWindowState(width = 560.dp, height = 880.dp),
-        ) {
-            // Re-applied when the window is shown again, since a hidden window may be re-created natively.
-            LaunchedEffect(dark, windowVisible) { if (windowVisible) WindowChrome.setDarkTitleBar(window, dark) }
-            DroidLinkDesktopTheme(dark) {
-                if (showSettings) {
-                    SettingsScreen(controller, onBack = { showSettings = false })
-                } else {
-                    MainScreen(controller, onOpenSettings = { showSettings = true })
+            MirrorWindow(controller.mirror, dark)
+
+            val shot by controller.screenshot.collectAsState()
+            shot?.let { notice ->
+                key(notice.id) {
+                    ScreenshotPopup(notice, dark, onDismiss = { controller.dismissScreenshot(notice.id) })
+                }
+            }
+
+            Window(
+                // With a tray icon, closing the window keeps the server running in the background.
+                onCloseRequest = { if (trayAvailable) windowVisible = false else quit() },
+                visible = windowVisible,
+                title = appName,
+                icon = AppIcon,
+                state = mainWindowState,
+            ) {
+                // Re-applied when the window is shown again, since a hidden window may be re-created natively.
+                LaunchedEffect(dark, windowVisible) { if (windowVisible) WindowChrome.setDarkTitleBar(window, dark) }
+                DroidLinkDesktopTheme(dark) {
+                    if (showSettings) {
+                        SettingsScreen(controller, onBack = { showSettings = false })
+                    } else {
+                        MainScreen(controller, onOpenSettings = { showSettings = true })
+                    }
                 }
             }
         }
+    }
+}
+
+/** Applies [AppLanguage] to the JVM default locale, which Compose resources and getString() read. */
+private object UiLocale {
+    private val system: Locale = Locale.getDefault()
+
+    fun apply(language: AppLanguage) {
+        Locale.setDefault(language.tag?.let(Locale::forLanguageTag) ?: system)
     }
 }

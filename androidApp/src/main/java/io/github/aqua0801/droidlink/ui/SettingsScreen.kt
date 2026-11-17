@@ -1,6 +1,7 @@
 package io.github.aqua0801.droidlink.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -31,12 +33,24 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.aqua0801.droidlink.R
 import io.github.aqua0801.droidlink.data.PhoneSettings
+import io.github.aqua0801.droidlink.i18n.AppLocales
+import io.github.aqua0801.droidlink.shared.settings.AppLanguage
 import io.github.aqua0801.droidlink.shared.settings.ThemeMode
+
+private val AppLanguage.label: Int
+    get() = when (this) {
+        AppLanguage.SYSTEM -> R.string.language_system
+        AppLanguage.ENGLISH -> R.string.language_english
+        AppLanguage.TRADITIONAL_CHINESE -> R.string.language_zh_tw
+    }
 
 @Composable
 fun SettingsScreen(settings: PhoneSettings, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     val theme by settings.theme.collectAsStateWithLifecycle()
+    val language by settings.language.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val activity = LocalActivity.current
 
     Scaffold { padding ->
         Column(
@@ -61,6 +75,27 @@ fun SettingsScreen(settings: PhoneSettings, onBack: () -> Unit) {
                     ) {
                         RadioButton(selected = mode == theme, onClick = null, modifier = Modifier.padding(end = 12.dp))
                         Text(stringResource(mode.label), style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+            }
+
+            Section(R.string.settings_language) {
+                AppLanguage.entries.forEach { option ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = option == language,
+                                onClick = {
+                                    if (option != language && AppLocales.set(context, settings, option)) activity?.recreate()
+                                },
+                                role = Role.RadioButton,
+                            )
+                            .padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = option == language, onClick = null, modifier = Modifier.padding(end = 12.dp))
+                        Text(stringResource(option.label), style = MaterialTheme.typography.bodyLarge)
                     }
                 }
             }

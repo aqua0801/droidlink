@@ -57,6 +57,7 @@ import io.github.aqua0801.droidlink.desktop.hotkey.HotkeyStatus
 import io.github.aqua0801.droidlink.desktop.platform.FileReveal
 import io.github.aqua0801.droidlink.desktop.platform.chooseFolder
 import io.github.aqua0801.droidlink.desktop.resources.*
+import io.github.aqua0801.droidlink.shared.settings.AppLanguage
 import io.github.aqua0801.droidlink.shared.settings.ThemeMode
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
@@ -85,6 +86,12 @@ fun SettingsScreen(controller: DesktopController, onBack: () -> Unit) {
                     ThemeOption(settings.theme == ThemeMode.SYSTEM, Res.string.theme_system) { update { it.copy(theme = ThemeMode.SYSTEM) } }
                     ThemeOption(settings.theme == ThemeMode.LIGHT, Res.string.theme_light) { update { it.copy(theme = ThemeMode.LIGHT) } }
                     ThemeOption(settings.theme == ThemeMode.DARK, Res.string.theme_dark) { update { it.copy(theme = ThemeMode.DARK) } }
+                }
+                Text(stringResource(Res.string.settings_language), style = MaterialTheme.typography.titleSmall)
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    AppLanguage.entries.forEach { language ->
+                        ThemeOption(settings.language == language, language.label) { update { it.copy(language = language) } }
+                    }
                 }
             }
 
@@ -232,6 +239,14 @@ private fun SwitchOption(checked: Boolean, title: StringResource, description: S
     }
 }
 
+private val AppLanguage.label: StringResource
+    get() = when (this) {
+        AppLanguage.SYSTEM -> Res.string.language_system
+        AppLanguage.ENGLISH -> Res.string.language_english
+        AppLanguage.TRADITIONAL_CHINESE -> Res.string.language_zh_tw
+    }
+
+/** A radio option with a label; used for theme and language. */
 @Composable
 private fun ThemeOption(selected: Boolean, label: StringResource, onSelect: () -> Unit) {
     Row(
@@ -263,7 +278,7 @@ private fun ModeOption(selected: Boolean, title: StringResource, description: St
 }
 
 /**
- * Shows a hotkey and records a new one: click 變更, then press the combination.
+ * Shows a hotkey and records a new one: click Change, then press the combination.
  * The global hotkeys are released while recording so the keys reach this window.
  */
 @Composable

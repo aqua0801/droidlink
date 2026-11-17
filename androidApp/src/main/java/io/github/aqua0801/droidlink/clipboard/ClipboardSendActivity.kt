@@ -1,5 +1,6 @@
 package io.github.aqua0801.droidlink.clipboard
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
@@ -7,18 +8,23 @@ import android.os.Looper
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import io.github.aqua0801.droidlink.graph
+import io.github.aqua0801.droidlink.i18n.AppLocales
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
  * Invisible activity that forwards text to the PC. Entry points:
- * - ACTION_PROCESS_TEXT: the "傳到電腦" item in other apps' text selection menu
+ * - ACTION_PROCESS_TEXT: the "Send to PC" item in other apps' text selection menu
  * - ACTION_SEND (text/plain): the share sheet
  * - [ACTION_SEND_CLIPBOARD]: the Quick Settings tile; reads the clipboard once this
  *   window has focus, which is when Android allows it
  */
 class ClipboardSendActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLocales.wrap(newBase))
+    }
+
     private var waitingForFocus = false
     private val handler = Handler(Looper.getMainLooper())
 

@@ -41,7 +41,7 @@ class PhoneFileTransfers(private val context: Context, private val graph: AppGra
             notConnected -> context.getString(R.string.files_not_connected)
             started == 0 -> context.getString(R.string.files_unreadable_all)
             unreadable > 0 -> context.resources.getQuantityString(R.plurals.files_sending, started, started) +
-                context.getString(R.string.files_unreadable_some, unreadable)
+                context.resources.getQuantityString(R.plurals.files_unreadable_some, unreadable, unreadable)
             else -> context.resources.getQuantityString(R.plurals.files_sending, started, started)
         }
     }

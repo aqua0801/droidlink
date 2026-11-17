@@ -55,6 +55,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -247,7 +248,7 @@ fun FolderBrowserScreen(folder: PhoneSyncFolder, onBack: () -> Unit) {
         val targets = pendingDelete
         AlertDialog(
             onDismissRequest = { pendingDelete = emptyList() },
-            title = { Text(stringResource(R.string.browser_delete_title, targets.size)) },
+            title = { Text(pluralStringResource(R.plurals.browser_delete_title, targets.size, targets.size)) },
             text = { Text(stringResource(R.string.browser_delete_body)) },
             confirmButton = {
                 TextButton(onClick = {
@@ -255,7 +256,7 @@ fun FolderBrowserScreen(folder: PhoneSyncFolder, onBack: () -> Unit) {
                     scope.launch {
                         val failed = withContext(Dispatchers.IO) { targets.count { !t.delete(it.id) } }
                         if (failed > 0) {
-                            Toast.makeText(context, resources.getString(R.string.browser_delete_failed, failed), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, resources.getQuantityString(R.plurals.browser_delete_failed, failed, failed), Toast.LENGTH_SHORT).show()
                         }
                         setSelected(emptySet())
                         if (viewing.isNotEmpty() && targets.any { it.id == viewing }) viewing = afterDelete

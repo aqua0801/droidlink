@@ -1,5 +1,6 @@
 package io.github.aqua0801.droidlink.transfer
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -8,15 +9,20 @@ import androidx.activity.ComponentActivity
 import androidx.core.content.IntentCompat
 import androidx.lifecycle.lifecycleScope
 import io.github.aqua0801.droidlink.graph
+import io.github.aqua0801.droidlink.i18n.AppLocales
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Invisible share-sheet target ("傳送檔案到電腦"): ACTION_SEND / ACTION_SEND_MULTIPLE with any
+ * Invisible share-sheet target ("Send files to PC"): ACTION_SEND / ACTION_SEND_MULTIPLE with any
  * file type. Stays alive until the streams are opened, so the URI read grants are still valid.
  */
 class FileSendActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLocales.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val uris = when (intent?.action) {

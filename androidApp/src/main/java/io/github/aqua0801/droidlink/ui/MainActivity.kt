@@ -2,6 +2,7 @@ package io.github.aqua0801.droidlink.ui
 
 import android.Manifest
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
@@ -23,6 +24,7 @@ import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import io.github.aqua0801.droidlink.R
 import io.github.aqua0801.droidlink.graph
+import io.github.aqua0801.droidlink.i18n.AppLocales
 import io.github.aqua0801.droidlink.shared.pairing.PairingInfo
 import io.github.aqua0801.droidlink.shared.transfer.Transfer
 import kotlinx.coroutines.Dispatchers
@@ -32,6 +34,10 @@ import kotlinx.coroutines.withContext
 private enum class Screen { MAIN, SETTINGS, SYNC_BROWSER }
 
 class MainActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLocales.wrap(newBase))
+    }
+
     private val scanLauncher = registerForActivityResult(ScanContract()) { result ->
         result.contents?.let(::onScanned)
     }

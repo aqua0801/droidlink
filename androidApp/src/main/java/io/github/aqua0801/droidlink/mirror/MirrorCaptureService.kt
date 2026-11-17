@@ -21,6 +21,7 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.IntentCompat
 import io.github.aqua0801.droidlink.R
 import io.github.aqua0801.droidlink.graph
+import io.github.aqua0801.droidlink.i18n.AppLocales
 import io.github.aqua0801.droidlink.shared.protocol.MirrorStreamHello
 import kotlinx.coroutines.runBlocking
 
@@ -30,6 +31,10 @@ import kotlinx.coroutines.runBlocking
  * closes the stream, the user taps "stop", or the system revokes the projection.
  */
 class MirrorCaptureService : Service() {
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLocales.wrap(newBase))
+    }
+
     private var projection: MediaProjection? = null
     private var streamer: ScreenStreamer? = null
     private var worker: Thread? = null

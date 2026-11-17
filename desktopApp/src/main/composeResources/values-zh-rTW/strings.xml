@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Traditional Chinese. The default (English) strings are in values/strings.xml. -->
+<resources>
+    <string name="app_name">DroidLink</string>
+    <string name="tray_show">顯示 DroidLink</string>
+    <string name="tray_quit">結束</string>
+    <string name="tray_settings">設定…</string>
+
+    <string name="server_starting">啟動中…</string>
+    <string name="server_running">%1$s · 監聽連接埠 %2$s</string>
+    <string name="server_failed">伺服器無法啟動：%1$s</string>
+
+    <string name="section_devices">已連線裝置</string>
+    <string name="devices_empty">目前沒有手機連線。</string>
+
+    <string name="section_pairing">配對新裝置</string>
+    <string name="pairing_hint">在手機的 DroidLink 點「掃描 QR 碼配對電腦」，再掃描這裡產生的 QR 碼。</string>
+    <string name="pairing_generate">產生配對 QR 碼</string>
+    <string name="pairing_qr_description">配對 QR 碼</string>
+    <string name="pairing_remaining">剩餘 %1$s</string>
+    <string name="pairing_hosts">手機會依序嘗試：</string>
+
+    <string name="section_trusted">已信任的裝置</string>
+    <string name="trusted_empty">尚未配對任何手機。</string>
+    <string name="trusted_connected">%1$s　· 已連線</string>
+
+    <string name="section_clipboard">剪貼簿</string>
+    <string name="clipboard_last_sent">最近傳送：%1$s</string>
+    <string name="clipboard_last_received">最近接收：%1$s</string>
+    <string name="clipboard_phone_hint">在手機上選取文字後選「傳到電腦」、用分享選單或快速設定的「傳送剪貼簿」，就能把內容傳到電腦。</string>
+
+    <string name="own_fingerprint">本機指紋　%1$s</string>
+    <string name="action_cancel">取消</string>
+    <string name="action_forget">移除</string>
+
+    <string name="battery_waiting">等待電量資訊…</string>
+    <string name="battery_full">已充飽</string>
+    <string name="battery_charging">充電中</string>
+    <string name="battery_plugged">已接電源</string>
+    <string name="battery_discharging">使用電池</string>
+    <string name="power_ac">變壓器</string>
+    <string name="power_usb">USB</string>
+    <string name="power_wireless">無線充電</string>
+    <string name="power_dock">底座</string>
+
+    <string name="notify_paired_title">配對完成</string>
+    <string name="notify_paired_body">%1$s 已與這台電腦配對</string>
+    <string name="notify_full_title">%1$s 已充飽</string>
+    <string name="notify_full_body">電量 %1$s，可以拔掉充電器了</string>
+    <string name="notify_low_title">%1$s 電量偏低</string>
+    <string name="notify_low_body">剩下 %1$s</string>
+
+    <string name="section_enhanced">ADB 增強模式</string>
+    <string name="enhanced_intro">透過 ADB 在手機上以 shell 身分執行輔助程式，解鎖背景即時剪貼簿、靜默安裝 APK、完整系統紀錄。需要先在手機開啟 USB 或無線偵錯並授權這台電腦。</string>
+    <string name="enhanced_adb_missing">找不到 adb。請確認 Android SDK platform-tools 已安裝，或把 adb 加入 PATH。</string>
+    <string name="enhanced_no_devices">沒有偵測到裝置。請用 USB 連接，或先 adb connect 無線偵錯的位址。</string>
+    <string name="enhanced_device_unauthorized">%1$s（等待手機上授權）</string>
+    <string name="enhanced_device_offline">%1$s（離線）</string>
+    <string name="enhanced_start">啟動</string>
+    <string name="enhanced_stop">停止</string>
+    <string name="enhanced_state_off">未啟動</string>
+    <string name="enhanced_state_starting">正在啟動輔助程式…</string>
+    <string name="enhanced_state_connected">已連線　%1$s · Android %2$s · SDK %3$s</string>
+    <string name="enhanced_state_failed">啟動失敗：%1$s</string>
+
+    <string name="logcat_title">系統紀錄（logcat）</string>
+    <string name="logcat_filter_hint">篩選參數，例如 *:E 或 -s MyTag:D</string>
+    <string name="logcat_start">開始</string>
+    <string name="logcat_stop">停止</string>
+    <string name="logcat_clear">清除</string>
+    <string name="logcat_empty">尚無紀錄。按「開始」串流 logcat。</string>
+
+    <string name="install_title">安裝 APK</string>
+    <string name="install_choose">選擇 APK 檔案…</string>
+    <string name="install_dialog_title">選擇要安裝到手機的 APK</string>
+
+    <string name="section_transfers">檔案傳輸</string>
+    <string name="transfers_empty">把檔案拖曳到這個視窗就能傳到手機，或按已連線裝置旁的「傳送檔案」。手機傳來的檔案會存到 %1$s。</string>
+    <string name="transfers_open_folder">開啟下載資料夾</string>
+    <string name="transfers_clear">清除已完成</string>
+    <string name="transfers_drop_here">放開以傳送到手機</string>
+    <string name="device_send_files">傳送檔案</string>
+    <string name="send_dialog_title">選擇要傳到手機的檔案</string>
+    <string name="drop_no_device">沒有已連線的手機，無法傳送。</string>
+    <string name="drop_multiple_devices">有多支手機連線中，請用各裝置旁的「傳送檔案」選擇要傳給誰。</string>
+
+    <string name="transfer_to">傳送至 %1$s</string>
+    <string name="transfer_from">來自 %1$s</string>
+    <string name="transfer_waiting">等待對方接收…</string>
+    <string name="transfer_progress">%1$s / %2$s</string>
+    <string name="transfer_sent">已傳送 · %1$s</string>
+    <string name="transfer_saved">已儲存 · %1$s</string>
+    <string name="transfer_cancelled">已取消</string>
+    <string name="transfer_failed">失敗：%1$s</string>
+    <string name="transfer_cancel">取消</string>
+    <string name="transfer_open">開啟</string>
+    <string name="transfer_reveal">顯示位置</string>
+
+    <string name="error_declined">對方拒絕接收</string>
+    <string name="error_storage">儲存空間不足或無法寫入</string>
+    <string name="error_timeout">對方沒有回應</string>
+    <string name="error_connection_lost">連線中斷</string>
+    <string name="error_checksum">檔案驗證失敗</string>
+    <string name="error_cancelled">已取消</string>
+    <string name="error_io">讀寫錯誤</string>
+
+    <string name="notify_received_title">已收到檔案</string>
+    <string name="notify_received_body">%1$s（來自 %2$s）</string>
+
+    <!-- Settings -->
+    <string name="action_settings">設定</string>
+    <string name="settings_title">設定</string>
+    <string name="settings_back">返回</string>
+    <string name="settings_appearance">外觀</string>
+    <string name="settings_theme">主題</string>
+    <string name="theme_system">跟隨系統</string>
+    <string name="theme_light">淺色</string>
+    <string name="theme_dark">深色</string>
+    <string name="settings_language">語言</string>
+    <string name="language_system">跟隨系統</string>
+    <string name="language_english">English</string>
+    <string name="language_zh_tw">繁體中文</string>
+    <string name="settings_pc_to_phone">電腦 → 手機</string>
+    <string name="settings_phone_to_pc">手機 → 電腦</string>
+    <string name="pc_auto_title">自動</string>
+    <string name="pc_auto_desc">在電腦上每次複製，都會同步到手機。</string>
+    <string name="pc_hotkey_title">快捷鍵</string>
+    <string name="pc_hotkey_desc">平常複製不會同步；按下推送快捷鍵時，才把電腦目前的剪貼簿傳到手機。</string>
+    <string name="pc_off_title">關閉</string>
+    <string name="pc_off_desc">不把電腦的剪貼簿傳到手機。</string>
+    <string name="phone_manual_title">手動</string>
+    <string name="phone_manual_desc">只接收手機主動送出的內容：選取文字後「傳到電腦」、快速設定磚、分享選單。啟動 ADB 增強模式時，也可以在電腦按拉取快捷鍵，取得手機目前的剪貼簿。</string>
+    <string name="phone_auto_title">自動</string>
+    <string name="phone_auto_desc">手機每次複製都同步到電腦。需要 ADB 增強模式；只有基本模式時和「手動」相同。</string>
+    <string name="phone_off_title">關閉</string>
+    <string name="phone_off_desc">不接收手機的剪貼簿。</string>
+    <string name="hotkey_push">推送快捷鍵</string>
+    <string name="hotkey_pull">拉取快捷鍵</string>
+    <string name="hotkey_change">變更</string>
+    <string name="hotkey_cancel">取消</string>
+    <string name="hotkey_reset">恢復預設</string>
+    <string name="hotkey_recording">請按下組合鍵…（Esc 取消）</string>
+    <string name="hotkey_invalid">請用 Ctrl 或 Alt 搭配字母、數字或 F1–F12。</string>
+    <string name="hotkey_active">已啟用</string>
+    <string name="hotkey_conflict">這組按鍵已被其他程式占用，請換一組。</string>
+    <string name="hotkey_unsupported">此系統暫不支援全域快捷鍵。</string>
+    <string name="hotkey_inactive">選擇上方對應的模式後才會啟用。</string>
+    <string name="settings_battery">手機電量提醒</string>
+    <string name="alert_battery_low">低電量提醒</string>
+    <string name="alert_battery_low_threshold">手機未充電且電量降到 %1$s 以下時提醒</string>
+    <string name="alert_battery_full">充飽電提醒</string>
+    <string name="alert_battery_full_desc">充電中達到 100% 時提醒一次</string>
+    <string name="settings_notifications">通知</string>
+    <string name="notify_clipboard">剪貼簿快捷鍵結果</string>
+    <string name="notify_clipboard_desc">推送或拉取成功時顯示通知</string>
+    <string name="notify_file_received">收到檔案通知</string>
+    <string name="notify_file_received_desc">手機傳來的檔案存好後顯示通知</string>
+    <string name="notify_screenshot">手機截圖預覽</string>
+    <string name="notify_screenshot_desc">手機傳來截圖時在右下角顯示預覽，可複製或開啟（截圖存在下載資料夾的 Screenshots）</string>
+    <string name="shot_title">%1$s 的截圖</string>
+    <string name="shot_copy">複製</string>
+    <string name="shot_copied">已複製</string>
+    <string name="shot_copy_failed">無法複製</string>
+    <string name="shot_open">開啟</string>
+    <string name="shot_reveal">在資料夾中顯示</string>
+    <string name="shot_close">關閉</string>
+    <string name="notify_errors_hint">失敗或需要處理的提示（例如手機未連線、需要增強模式）一律會顯示。</string>
+    <string name="mirror_start">投影畫面</string>
+    <string name="mirror_stop">停止投影</string>
+    <string name="mirror_starting">正在啟動投影…</string>
+    <string name="mirror_title">%1$s 的畫面</string>
+    <string name="mirror_failed">投影失敗：%1$s</string>
+    <string name="mirror_back">返回（右鍵）</string>
+    <string name="mirror_home">主畫面（中鍵）</string>
+    <string name="mirror_recents">多工</string>
+    <string name="mirror_volume_down">音量 −</string>
+    <string name="mirror_volume_up">音量 +</string>
+    <string name="mirror_power">電源</string>
+    <string name="mirror_rotate">旋轉螢幕</string>
+    <string name="mirror_screenshot">截圖（存檔並複製）</string>
+    <string name="mirror_pin">固定在最上層</string>
+    <string name="mirror_unpin">取消固定</string>
+    <string name="mirror_shot_saved">已存檔並複製到剪貼簿</string>
+    <string name="mirror_shot_failed">截圖失敗</string>
+    <string name="device_mirror">無線投影</string>
+    <string name="mirror_waiting_phone">等待手機同意投影…</string>
+    <string name="mirror_declined">手機拒絕了投影</string>
+    <string name="mirror_no_answer">手機沒有回應（請確認手機上的通知）</string>
+    <string name="mirror_view_only">無線投影只能觀看，要操控請改用 USB（加強模式）</string>
+    <string name="settings_sync">同步資料夾</string>
+    <string name="sync_folder_desc">這個資料夾會推送到手機。電腦是唯一來源：只會把手機缺少或內容不同的檔案覆蓋過去，手機上的修改不會傳回電腦。</string>
+    <string name="sync_choose_title">選擇同步資料夾</string>
+    <string name="sync_change">變更…</string>
+    <string name="sync_use_default">使用預設位置</string>
+    <string name="sync_mirror">完整鏡像</string>
+    <string name="sync_mirror_desc">同時刪除手機上、電腦資料夾已經沒有的檔案</string>
+    <string name="device_sync">同步資料夾</string>
+    <string name="sync_comparing">同步中：比對檔案…</string>
+    <string name="sync_running">同步中：%1$d / %2$d</string>
+    <string name="sync_finished">上次同步 %1$s：更新 %2$d、未變更 %3$d</string>
+    <string name="sync_finished_deleted">、刪除 %1$d</string>
+    <string name="sync_finished_failed">（失敗 %1$d）</string>
+    <string name="sync_failed_folder">同步失敗：電腦的同步資料夾不存在，請到設定確認</string>
+    <string name="sync_failed_phone_not_ready">手機尚未設定同步資料夾，請在手機 App 選擇資料夾</string>
+    <string name="sync_failed_no_reply">同步失敗：手機沒有回應，可能是手機版本太舊</string>
+    <string name="sync_failed_disconnected">同步中斷：連線已中斷</string>
+    <string name="settings_files">檔案</string>
+    <string name="settings_downloads">收到的檔案存放位置</string>
+
+    <!-- Clipboard summary on the main screen -->
+    <string name="clipboard_summary_pc">電腦 → 手機：%1$s</string>
+    <string name="clipboard_summary_phone">手機 → 電腦：%1$s</string>
+    <string name="clipboard_open_settings">剪貼簿設定…</string>
+    <string name="mode_auto">自動</string>
+    <string name="mode_auto_enhanced">自動（需 ADB 增強模式）</string>
+    <string name="mode_hotkey_with">快捷鍵 %1$s</string>
+    <string name="mode_manual_with">手動 · 拉取 %1$s</string>
+    <string name="mode_off">關閉</string>
+
+    <!-- Hotkey feedback (tray notifications) -->
+    <string name="clip_pushed">已傳送到手機</string>
+    <string name="clip_pulled">已取得手機剪貼簿</string>
+    <string name="clip_pc_empty">電腦剪貼簿沒有文字</string>
+    <string name="clip_phone_empty">手機剪貼簿是空的</string>
+    <string name="clip_no_phone">沒有已連線的手機</string>
+    <string name="clip_needs_enhanced_title">需要 ADB 增強模式</string>
+    <string name="clip_needs_enhanced_body">從手機拉取剪貼簿，要先在「ADB 增強模式」啟動手機。</string>
+</resources>

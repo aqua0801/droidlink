@@ -31,8 +31,11 @@
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.NoActionBar">
 
+        <!-- Language changes (Android 13+) are applied in place: Compose re-reads resources on
+             a configuration change, so the activity is not recreated. -->
         <activity
             android:name=".ui.MainActivity"
+            android:configChanges="locale|layoutDirection"
             android:exported="true"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>

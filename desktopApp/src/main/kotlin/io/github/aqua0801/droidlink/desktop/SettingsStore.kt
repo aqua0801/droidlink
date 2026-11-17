@@ -1,6 +1,7 @@
 package io.github.aqua0801.droidlink.desktop
 
 import io.github.aqua0801.droidlink.desktop.hotkey.Hotkey
+import io.github.aqua0801.droidlink.shared.settings.AppLanguage
 import io.github.aqua0801.droidlink.shared.settings.ThemeMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,7 +19,7 @@ enum class PcToPhoneMode { AUTO, HOTKEY, OFF }
 
 /**
  * Phone -> PC clipboard. AUTO needs enhanced mode (the helper reports every phone copy).
- * MANUAL accepts what the phone sends explicitly ("傳到電腦", tile, share) and enables the
+ * MANUAL accepts what the phone sends explicitly ("Send to PC", tile, share) and enables the
  * pull hotkey. OFF ignores the phone's clipboard entirely.
  */
 @Serializable
@@ -65,6 +66,7 @@ data class SyncSettings(
 @Serializable
 data class DesktopSettings(
     val theme: ThemeMode = ThemeMode.SYSTEM,
+    val language: AppLanguage = AppLanguage.DEFAULT,
     val pcToPhone: PcToPhoneMode = PcToPhoneMode.AUTO,
     val phoneToPc: PhoneToPcMode = PhoneToPcMode.MANUAL,
     val pushHotkey: Hotkey = Hotkey.DEFAULT_PUSH,

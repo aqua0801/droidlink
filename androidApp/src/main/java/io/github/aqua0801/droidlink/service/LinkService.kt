@@ -17,15 +17,16 @@ import androidx.lifecycle.lifecycleScope
 import io.github.aqua0801.droidlink.R
 import io.github.aqua0801.droidlink.battery.toBatteryStatus
 import io.github.aqua0801.droidlink.graph
+import io.github.aqua0801.droidlink.i18n.AppLocales
 import io.github.aqua0801.droidlink.link.LinkState
 import io.github.aqua0801.droidlink.shared.protocol.BatteryStatus
 import io.github.aqua0801.droidlink.ui.MainActivity
+import java.io.IOException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
-import java.io.IOException
 
 /**
  * Keeps the process alive while linked (vivo/OriginOS kills background apps aggressively)
@@ -33,6 +34,10 @@ import java.io.IOException
  * screenshot forwarding.
  */
 class LinkService : LifecycleService() {
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLocales.wrap(newBase))
+    }
+
     private val battery = MutableStateFlow<BatteryStatus?>(null)
 
     private val batteryReceiver = object : BroadcastReceiver() {

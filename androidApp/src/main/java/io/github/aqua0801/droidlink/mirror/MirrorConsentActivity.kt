@@ -1,17 +1,23 @@
 package io.github.aqua0801.droidlink.mirror
 
 import android.app.Activity
+import android.content.Context
 import android.media.projection.MediaProjectionManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import io.github.aqua0801.droidlink.graph
+import io.github.aqua0801.droidlink.i18n.AppLocales
 
 /**
  * Invisible activity that shows the system "start recording or casting?" dialog for one PC
  * request and hands the result to MirrorCaptureService.
  */
 class MirrorConsentActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLocales.wrap(newBase))
+    }
+
     private val consent = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val requestId = intent.getLongExtra(EXTRA_REQUEST_ID, 0)
         val data = result.data

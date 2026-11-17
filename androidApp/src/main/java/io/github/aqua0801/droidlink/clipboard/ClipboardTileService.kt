@@ -2,16 +2,22 @@ package io.github.aqua0801.droidlink.clipboard
 
 import android.annotation.SuppressLint
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import io.github.aqua0801.droidlink.R
 import io.github.aqua0801.droidlink.graph
+import io.github.aqua0801.droidlink.i18n.AppLocales
 import io.github.aqua0801.droidlink.link.LinkState
 
 /** Quick Settings tile: one tap sends the current clipboard to the PC. */
 class ClipboardTileService : TileService() {
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLocales.wrap(newBase))
+    }
+
     override fun onStartListening() {
         super.onStartListening()
         qsTile?.apply {
