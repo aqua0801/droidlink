@@ -1,65 +1,143 @@
 # DroidLink
 
-手機 ↔ 電腦開發輔助工具。Kotlin 單一專案，兩端共用協定與加密。
+A phone-to-PC companion for Android developers and power users. DroidLink pairs an Android
+phone with a desktop PC over an end-to-end encrypted connection on your own network, and adds
+an optional ADB-powered mode for things a normal app isn't allowed to do.
+
+Everything runs on your own devices: there is no server, no account and no cloud relay.
+
+> **Status:** early and actively developed (`0.1.x`). The desktop app targets **Windows 10/11**;
+> it may start on other platforms, but several features below are Windows-only for now.
+
+## Features
+
+**Over the encrypted P2P link** (phone app + desktop app, no cable needed)
+
+- **Pairing by QR code**, then automatic reconnects via mDNS on the LAN, or a manual address
+  (works with Tailscale MagicDNS names).
+- **Clipboard sync** with per-direction modes (automatic / hotkey / manual / off) and global
+  hotkeys on the PC to push or pull the clipboard.
+- **File transfer** in both directions with SHA-256 verification: drag files onto the desktop
+  window, or use the Android share sheet.
+- **Screenshot forwarding**: new phone screenshots appear on the PC in a small preview popup,
+  ready to copy or open.
+- **Folder sync**: push a PC folder to the phone as a one-way mirror (optionally deleting files
+  removed on the PC), with an in-app browser and viewers for images, video, audio, PDF and text.
+- **Battery alerts** on the PC when the phone is low or fully charged.
+- **Wireless screen mirroring** (view only), using the phone's own screen capture after a
+  consent prompt on the phone.
+
+**ADB enhanced mode** (phone connected via USB or wireless debugging)
+
+- **Background clipboard sync** in both directions, without the Android 10+ foreground limit.
+- **Screen mirroring with control**: mouse and keyboard input, navigation buttons, rotation,
+  screenshots. Powered by the bundled, unmodified [scrcpy](https://github.com/Genymobile/scrcpy)
+  server.
+- **APK install** and a **logcat viewer** with filters.
+
+**Both apps** ship in English and Traditional Chinese, with light, dark and system themes.
+
+## How it works
 
 ```
-shared/      純 Kotlin/JVM：訊息格式、分框、TLS 1.3 + 憑證固定、配對、LinkServer / LinkClient
-androidApp/  Jetpack Compose（minSdk 29）：QR 配對、自動重連、NSD 探索、前景服務
-desktopApp/  Compose for Desktop：伺服器、配對 QR、mDNS 廣播、系統匣通知
+ ┌──────────────┐   TLS 1.3, mutual auth, pinned certs   ┌──────────────┐
+ │  androidApp  │ ◀────────────────────────────────────▶ │  desktopApp  │
+ │  (Compose)   │      TCP 47100 · found via mDNS        │  (Compose    │
+ └──────────────┘                                        │   Desktop)   │
+        ▲                                                └──────┬───────┘
+        │  app_process (shell user)                             │
+ ┌──────┴───────┐               adb forward                     │
+ │ agent / scrcpy│ ◀─────────────────────────────────────────────┘
+ │    server     │          (enhanced mode only)
+ └───────────────┘
 ```
 
-## 指令
+The two connection paths are deliberately independent: different transports, protocols and code.
 
-```powershell
-$env:JAVA_HOME = 'C:\@TOOLS\AndroidStudio\jbr'
-.\gradlew :shared:test                 # 協定 / 加密測試
-.\gradlew :desktopApp:run              # 啟動電腦端
-.\gradlew :androidApp:installDebug     # 安裝到已連線的手機
+- **P2P link.** Each device has its own EC P-256 key and self-signed certificate. The desktop's
+  pairing QR code carries its addresses, its certificate fingerprint and a one-time token valid
+  for 5 minutes. The phone only accepts a PC whose fingerprint matches; the PC trusts the phone
+  after checking the token and remembers its fingerprint. Later reconnects use the pinned
+  fingerprints only. Tailscale or any other network is just a transport; authentication and
+  encryption are always DroidLink's own TLS.
+- **Enhanced mode.** The desktop pushes a small helper (`agent`, compiled to DEX) to the phone
+  and starts it with `app_process`, the same technique scrcpy uses. Running as the shell user
+  gives it the permissions of `adb shell`. It listens only on the phone's loopback interface,
+  is reached through `adb forward`, and exits when the desktop disconnects.
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) and [docs/screen-mirror.md](docs/screen-mirror.md) for
+details (currently in Traditional Chinese).
+
+## Project layout
+
+| Module | Contents |
+|---|---|
+| `shared` | Pure Kotlin/JVM: wire protocol, framing, TLS and certificate pinning, pairing, file transfer and sync logic |
+| `androidApp` | Android app (Jetpack Compose, min SDK 29 / Android 10) |
+| `desktopApp` | Desktop app (Compose for Desktop): server, mDNS, tray, hotkeys, enhanced mode, mirroring |
+| `agent` | Phone-side helper for enhanced mode, dexed with `d8` and bundled into the desktop app |
+
+## Building
+
+Requirements:
+
+- JDK 17 or newer (Android Studio's bundled JBR works for building and running).
+- Android SDK with build-tools and a platform installed. Set `sdk.dir` in `local.properties` or
+  `ANDROID_HOME`; the `agent` module needs it too, to find `d8` and `android.jar`.
+- `adb` on your `PATH` for enhanced mode.
+
+```shell
+./gradlew :desktopApp:run              # run the desktop app
+./gradlew :androidApp:installDebug     # install the phone app on a connected device
+./gradlew test                         # unit tests
 ```
 
-## 連線與安全
+On Windows, use `gradlew` instead of `./gradlew`.
 
-- 電腦端監聽 TCP `47100`，同區網用 mDNS（`_droidlink._tcp`）廣播，TXT 帶憑證指紋。
-- 每台裝置各有一把 EC P-256 金鑰和自簽憑證；TLS 1.3 雙向驗證。
-- 配對：電腦 QR 碼含「主機清單 + 電腦憑證指紋 + 一次性 token（5 分鐘）」。手機只接受指紋相符的電腦，電腦用 token 授權手機後記住手機的指紋。
-- 之後重連只靠指紋，不需要 token。Tailscale 只是傳輸路徑，加密驗證一樣走自己的 TLS。
+### Packaging the desktop app
 
-## 資料位置
+```shell
+./gradlew :desktopApp:packageExe       # or :desktopApp:packageMsi
+```
 
-- 電腦：`%APPDATA%\DroidLink\`（`identity.json`、`trusted-devices.json`、`settings.json`）
-- 手機：app 私有目錄 `files/identity.json`、SharedPreferences `paired_pcs`、`settings`
+Installers bundle their own Java runtime, so users don't need Java installed. Packaging needs a
+full JDK with `jpackage`; Gradle downloads Temurin 21 for this automatically.
 
-## 剪貼簿（基本模式）
+### Tests against real devices
 
-- 電腦 → 手機：自動。Windows 用 `GetClipboardSequenceNumber` 偵測變更，只有變了才讀內容。
-- 手機 → 電腦：Android 10 起 App 只有在自己的視窗取得焦點時才能讀剪貼簿，所以由使用者主動觸發：
-  選取文字選單「傳到電腦」、分享選單、快速設定磚「傳送剪貼簿」，或打開 DroidLink 時自動送出。
-- 兩端都會記住最後一次同步的內容，避免回傳造成迴圈。
-- 背景雙向即時同步由 ADB 增強模式提供（見 `ARCHITECTURE.md`）。
+Some tests are opt-in because they need hardware or affect your desktop session:
 
-## 檔案傳輸
+```shell
+./gradlew :desktopApp:test -PrealMirror=true --tests "*MirrorRealTest*"    # needs a phone on adb
+./gradlew :desktopApp:test -PrealHotkeys=true --tests "*GlobalHotkeys*"    # sends real keystrokes
+```
 
-走基本模式的加密 P2P 連線，兩端共用 `shared/transfer` 的傳輸引擎。
+## Where data is stored
 
-- 流程：`file.offer` → `file.accept` / `file.reject` → `FILE_CHUNK` 二進位框（64 KB）→
-  `file.complete`（SHA-256）→ `file.result`。任一端可 `file.cancel`。控制訊息會穿插在資料框之間。
-- 接收端邊寫邊算 SHA-256，不符就刪除；取消或斷線也會刪掉未完成的檔案。已配對裝置自動接收。
-- 對方給的檔名一律只取最後一段並過濾非法字元與保留名稱（`FileNames.sanitize`）。
-- 電腦：存到 `<家目錄>\Downloads\DroidLink\`，先寫 `.part`，驗證後才改名；同名加 `(1)`，不會覆蓋。
-  傳送：拖曳檔案到視窗（只有一支手機連線時），或按裝置旁的「傳送檔案」。
-- 手機：用 MediaStore 存到「下載/DroidLink」（不需儲存權限），完成前為 pending。
-  傳送：分享選單「傳送檔案到電腦」或 App 內「選擇檔案傳到電腦」。分享進來的 URI 權限只在接收的
-  Activity 存活時有效，所以串流會先開好再等電腦接受。
+| | Location |
+|---|---|
+| Desktop settings and keys | `%APPDATA%\DroidLink\` on Windows, `~/.config/droidlink/` elsewhere |
+| Files received on the PC | `~/Downloads/DroidLink/` (screenshots in `Screenshots/`) |
+| Default PC sync folder | `~/DroidLink Sync/` (configurable) |
+| Files received on the phone | `Download/DroidLink` via MediaStore |
+| Phone sync folder | a folder you pick when setting up sync |
 
-## 多國語系
+Your device's private key never leaves the device it was created on.
 
-所有介面字串都在資源檔，目前預設語系是繁體中文：
+## Known limitations
 
-- Android：`androidApp/src/main/res/values/strings.xml`
-- 電腦：`desktopApp/src/main/composeResources/values/strings.xml`
+- The desktop app is developed and tested on Windows. Global hotkeys, the clipboard watcher,
+  the dark title bar and the bundled FFmpeg decoder are Windows-only for now.
+- Without enhanced mode, phone → PC clipboard sync is manual (selection menu, share sheet or
+  quick settings tile), because Android 10+ only lets the foreground app read the clipboard.
+- Wireless mirroring is view only. On Android 15+, the system hides sensitive content such as
+  one-time codes during screen capture.
+- IME composition (e.g. Zhuyin) isn't forwarded when controlling the phone; paste with Ctrl+V.
 
-新增語言時，在對應位置加 `values-en/strings.xml` 等資料夾即可。程式碼裡不寫死任何介面文字。
+## License
 
-## 平台抽象
+DroidLink is released under the [MIT License](LICENSE).
 
-電腦端與 OS 相關的部分都放在介面後面（`TrayNotifier`、`SystemClipboard`；之後的 `ScreenCapturer` 也一樣），之後補 Linux 實作即可。
+It bundles the unmodified scrcpy server (Apache License 2.0) and uses FFmpeg through the
+LGPL build of bytedeco's presets, among other libraries. See
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
