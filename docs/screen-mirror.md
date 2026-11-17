@@ -1,6 +1,6 @@
 # 手機畫面投影 — 規劃
 
-狀態：第 1 階段實作中（只看畫面）。scrcpy-server 固定為 **v5.0.1**。
+狀態：第 1、2 階段完成待實測（畫面＋操控）。scrcpy-server 固定為 **v5.0.1**。
 
 ## 決策
 
@@ -24,8 +24,16 @@
 - [x] `FfmpegVideoDecoder`（bytedeco ffmpeg 8.1.2-1.5.14，LGPL，只帶 windows-x86_64 natives），H.264 → BGRA。
 - [x] `MirrorController`：push / forward / 啟動 / 連線重試 / 讀串流 / 解碼 / 清理。
 - [x] 投影視窗（維持比例、旋轉時調整視窗形狀）；增強模式區塊加「投影畫面」按鈕。
-- [ ] 實機驗證延遲與穩定度；必要時改成重用 Skia bitmap（目前每格新配置）。
-- [ ] 置頂開關、截圖按鈕（第 1 階段收尾）。
+- [x] 實機驗證：畫面正常（swscale 改用 `sws_scale_frame`，舊的 `sws_scale` 傳指標陣列會 EINVAL）。
+- [x] 置頂開關、截圖按鈕（存到 下載\DroidLink\Screenshots 並複製到剪貼簿）。
+- [ ] 視需要改成重用 Skia bitmap（目前每格新配置）。
+
+## 第 2 階段（操控）
+
+- [x] control socket：影像 socket 讀到 dummy byte 後再連 control socket，之後才讀 device meta（server 等所有 socket 都連上才送 meta）。
+- [x] `ScrcpyControl` 依 v5.0.1 `ControlMessageReader` 編碼：觸控（finger pointer id -2）、滾輪（i16 定點 /16）、按鍵、文字、設定剪貼簿並貼上、旋轉。
+- [x] 投影視窗：左鍵點擊/拖曳、右鍵返回、中鍵主畫面、滾輪、鍵盤（特殊鍵→keycode，可列印字元→文字，Ctrl+V 貼上電腦剪貼簿）、工具列（返回/主畫面/多工/音量/電源/旋轉/截圖/置頂）。
+- [ ] 已知限制：輸入法組字（注音等）不會轉送，中文請用 Ctrl+V 貼上。
 
 ## 備忘
 

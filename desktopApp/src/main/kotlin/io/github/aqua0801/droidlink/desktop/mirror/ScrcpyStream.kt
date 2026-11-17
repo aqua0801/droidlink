@@ -46,9 +46,22 @@ sealed interface StreamItem {
  */
 class ScrcpyStream(input: InputStream, private val forwardTunnel: Boolean = true) {
     private val data = DataInputStream(input)
+    private var dummyRead = !forwardTunnel
+
+    /**
+     * Forward tunnel only: the server writes this byte as soon as it accepts the video
+     * socket, so reading it proves the server is up. The rest of the header only follows
+     * once every socket (video, then control) is connected.
+     */
+    fun readDummy() {
+        if (!dummyRead) {
+            data.readUnsignedByte()
+            dummyRead = true
+        }
+    }
 
     fun readHeader(): StreamHeader {
-        if (forwardTunnel) data.readUnsignedByte()
+        readDummy()
         val nameBytes = ByteArray(DEVICE_NAME_FIELD).also(data::readFully)
         val nameEnd = nameBytes.indexOf(0).let { if (it < 0) nameBytes.size else it }
         val name = String(nameBytes, 0, nameEnd, Charsets.UTF_8)
