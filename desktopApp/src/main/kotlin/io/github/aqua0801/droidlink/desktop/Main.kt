@@ -1,20 +1,22 @@
 package io.github.aqua0801.droidlink.desktop
 
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.toAwtImage
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Tray
-import androidx.compose.ui.window.TrayState
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
-import androidx.compose.ui.window.isTraySupported
 import androidx.compose.ui.window.rememberWindowState
-import io.github.aqua0801.droidlink.desktop.platform.ComposeTrayNotifier
+import io.github.aqua0801.droidlink.desktop.platform.SwingTray
 import io.github.aqua0801.droidlink.desktop.platform.WindowChrome
 import io.github.aqua0801.droidlink.desktop.resources.Res
 import io.github.aqua0801.droidlink.desktop.resources.app_name
@@ -28,18 +30,23 @@ import io.github.aqua0801.droidlink.desktop.ui.MirrorWindow
 import io.github.aqua0801.droidlink.desktop.ui.ScreenshotPopup
 import io.github.aqua0801.droidlink.desktop.ui.SettingsScreen
 import io.github.aqua0801.droidlink.desktop.ui.isDarkTheme
+import io.github.aqua0801.droidlink.shared.settings.AppLanguage
+import java.awt.EventQueue
+import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import io.github.aqua0801.droidlink.shared.settings.AppLanguage
 import kotlinx.coroutines.cancel
 import org.jetbrains.compose.resources.stringResource
-import java.util.Locale
 
 fun main() {
-    val trayState = TrayState()
+    // AWT/Swing objects belong on the event thread.
+    val (tray, trayAvailable) = runOnEventThread {
+        val icon = SwingTray(AppIcon.toAwtImage(Density(1f), LayoutDirection.Ltr, Size(64f, 64f)), "DroidLink")
+        icon to icon.install()
+    }
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    val controller = DesktopController(appScope, ComposeTrayNotifier(trayState))
+    val controller = DesktopController(appScope, tray)
     UiLocale.apply(controller.settings.settings.value.language)
     controller.start()
 
@@ -49,9 +56,9 @@ fun main() {
         val quit: () -> Unit = {
             controller.stop()
             appScope.cancel()
+            tray.remove()
             exitApplication()
         }
-        val trayAvailable = isTraySupported
         val settings by controller.settings.settings.collectAsState()
         val dark = isDarkTheme(settings.theme)
         // Kept outside key() so a language switch doesn't move or resize the main window.
@@ -63,21 +70,22 @@ fun main() {
         key(language) {
             val appName = stringResource(Res.string.app_name)
 
-            if (trayAvailable) {
-                Tray(
-                    icon = AppIcon,
-                    state = trayState,
-                    tooltip = appName,
-                    onAction = { windowVisible = true },
-                    menu = {
-                        Item(stringResource(Res.string.tray_show), onClick = { windowVisible = true })
-                        Item(stringResource(Res.string.tray_settings), onClick = {
+            val showLabel = stringResource(Res.string.tray_show)
+            val settingsLabel = stringResource(Res.string.tray_settings)
+            val quitLabel = stringResource(Res.string.tray_quit)
+            SideEffect {
+                tray.setTooltip(appName)
+                tray.onAction = { windowVisible = true }
+                tray.setMenu(
+                    listOf(
+                        SwingTray.Item(showLabel) { windowVisible = true },
+                        SwingTray.Item(settingsLabel) {
                             showSettings = true
                             windowVisible = true
-                        })
-                        Separator()
-                        Item(stringResource(Res.string.tray_quit), onClick = quit)
-                    },
+                        },
+                        null,
+                        SwingTray.Item(quitLabel, quit),
+                    ),
                 )
             }
 
@@ -119,4 +127,10 @@ private object UiLocale {
     fun apply(language: AppLanguage) {
         Locale.setDefault(language.tag?.let(Locale::forLanguageTag) ?: system)
     }
+}
+
+private fun <T> runOnEventThread(block: () -> T): T {
+    var result: Result<T>? = null
+    EventQueue.invokeAndWait { result = runCatching(block) }
+    return result!!.getOrThrow()
 }
