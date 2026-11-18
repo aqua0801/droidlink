@@ -58,7 +58,7 @@ tasks.named<ProcessResources>("processResources") {
     }
 }
 
-// UI strings: src/main/composeResources/values*/strings.xml (`values` is zh-TW for now).
+// UI strings: src/main/composeResources/values*/strings.xml (`values` is English, the default).
 compose.resources {
     packageOfResClass = "io.github.aqua0801.droidlink.desktop.resources"
     publicResClass = false
@@ -80,7 +80,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Exe, TargetFormat.Deb)
             packageName = "DroidLink"
-            packageVersion = "1.0.0"
+            packageVersion = providers.gradleProperty("droidlink.version").get()
             description = "Phone-to-PC developer companion"
             vendor = "aqua0801"
 

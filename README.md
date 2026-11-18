@@ -44,12 +44,12 @@ Everything runs on your own devices: there is no server, no account and no cloud
  │  androidApp  │ ◀────────────────────────────────────▶ │  desktopApp  │
  │  (Compose)   │      TCP 47100 · found via mDNS        │  (Compose    │
  └──────────────┘                                        │   Desktop)   │
-        ▲                                                └──────┬───────┘
-        │  app_process (shell user)                             │
- ┌──────┴───────┐               adb forward                     │
- │ agent / scrcpy│ ◀─────────────────────────────────────────────┘
- │    server     │          (enhanced mode only)
- └───────────────┘
+                                                         └──────┬───────┘
+ ┌──────────────┐                adb forward                    │
+ │ agent, scrcpy│ ◀─────────────────────────────────────────────┘
+ │ on the phone │             (enhanced mode only)
+ │ (shell user) │
+ └──────────────┘
 ```
 
 The two connection paths are deliberately independent: different transports, protocols and code.
@@ -111,6 +111,29 @@ Some tests are opt-in because they need hardware or affect your desktop session:
 ./gradlew :desktopApp:test -PrealMirror=true --tests "*MirrorRealTest*"    # needs a phone on adb
 ./gradlew :desktopApp:test -PrealHotkeys=true --tests "*GlobalHotkeys*"    # sends real keystrokes
 ```
+
+## Releasing
+
+Release builds are signed with a key that is kept outside the repository. Create
+`keystore.properties` in the repo root (it is gitignored):
+
+```properties
+storeFile=C:/path/outside/the/repo/droidlink-release.jks
+storePassword=...
+keyAlias=droidlink
+keyPassword=...
+```
+
+Then bump `droidlink.version` and `droidlink.versionCode` in `gradle.properties`, commit, and
+run:
+
+```powershell
+./scripts/release.ps1            # tests, signed APK, Windows installer, checksums -> release/
+./scripts/release.ps1 -Publish   # same, then tags and creates the GitHub release
+```
+
+Release notes go in `docs/releases/v<version>.md`. Keep a backup of the keystore: without it,
+new APKs can't be installed over existing ones.
 
 ## Where data is stored
 

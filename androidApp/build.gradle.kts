@@ -1,8 +1,15 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
 }
+
+// Release signing: keystore.properties (gitignored) points at a keystore kept outside the repo.
+// Without it, release builds are unsigned and debug builds keep using the debug key.
+val keystoreProps = rootProject.file("keystore.properties").takeIf { it.isFile }
+    ?.let { file -> Properties().apply { file.inputStream().use(::load) } }
 
 android {
     namespace = "io.github.aqua0801.droidlink"
@@ -16,13 +23,26 @@ android {
         applicationId = "io.github.aqua0801.droidlink"
         minSdk = 29
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        // Single source of truth in gradle.properties, shared with the desktop app.
+        versionCode = providers.gradleProperty("droidlink.versionCode").get().toInt()
+        versionName = providers.gradleProperty("droidlink.version").get()
+    }
+
+    signingConfigs {
+        if (keystoreProps != null) {
+            create("release") {
+                storeFile = file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.findByName("release")
         }
     }
     compileOptions {

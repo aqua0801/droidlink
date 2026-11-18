@@ -1,4 +1,4 @@
-﻿# ---- Gradle / Kotlin ----
+# ---- Gradle / Kotlin ----
 .gradle/
 .kotlin/
 build/
@@ -40,6 +40,9 @@ google-services.json
 # ---- Runtime data (device identity / trusted peers) ----
 identity.json
 trusted-devices.json
+
+# ---- Release output (scripts/release.ps1) ----
+/release/
 
 # ---- Logs / crash dumps ----
 *.log
