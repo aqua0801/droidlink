@@ -3,6 +3,7 @@ package io.github.aqua0801.droidlink.desktop.mirror
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asComposeImageBitmap
 import androidx.compose.ui.graphics.toAwtImage
+import io.github.aqua0801.droidlink.desktop.MirrorSettings
 import io.github.aqua0801.droidlink.desktop.adb.Adb
 import io.github.aqua0801.droidlink.shared.link.Connection
 import io.github.aqua0801.droidlink.shared.link.LinkSession
@@ -42,14 +43,34 @@ import kotlin.random.Random
  * - Wireless: the phone's own MediaProjection encoder over a second TLS connection, view
  *   only ([startWireless] / [onStream]); the stream uses the same layout, so the same parser
  *   and decoder serve both.
- * Frames are decoded on an IO thread and published as the latest [ImageBitmap].
+ * Frames are decoded on an IO thread and published as the latest [ImageBitmap]. Over ADB the
+ * phone's audio is played as well ([audio]).
  */
-class MirrorController(private val scope: CoroutineScope, private val screenshotDir: File) {
+class MirrorController(
+    private val scope: CoroutineScope,
+    private val screenshotDir: File,
+    private val settings: () -> MirrorSettings,
+) {
     private val _state = MutableStateFlow<MirrorState>(MirrorState.Idle)
     val state: StateFlow<MirrorState> = _state.asStateFlow()
 
     private val _frame = MutableStateFlow<ImageBitmap?>(null)
     val frame: StateFlow<ImageBitmap?> = _frame.asStateFlow()
+
+    /** Phone audio in the current mirror: OFF when not forwarded (wireless, off in settings, unsupported). */
+    enum class Audio { OFF, PLAYING, MUTED }
+
+    private val _audio = MutableStateFlow(Audio.OFF)
+    val audio: StateFlow<Audio> = _audio.asStateFlow()
+
+    @Volatile
+    private var player: PcmPlayer? = null
+
+    fun toggleMute() {
+        val current = player ?: return
+        current.muted = !current.muted
+        _audio.value = if (current.muted) Audio.MUTED else Audio.PLAYING
+    }
 
     private var job: Job? = null
 
@@ -179,7 +200,16 @@ class MirrorController(private val scope: CoroutineScope, private val screenshot
         val push = Adb.run("-s", serial, "push", jar.absolutePath, ScrcpyServer.REMOTE_JAR, timeoutMs = 30_000)
         if (!push.ok) throw IOException("push failed: ${push.output}")
 
-        val options = ScrcpyServer.Options(scid = Random.nextInt(0x7FFF_FFFF), control = true)
+        val sdk = Adb.run("-s", serial, "shell", "getprop", "ro.build.version.sdk", timeoutMs = 5_000)
+            .output.trim().toIntOrNull() ?: 0
+        val prefs = settings()
+        val options = ScrcpyServer.Options(
+            scid = Random.nextInt(0x7FFF_FFFF),
+            control = true,
+            // Android 11 added playback capture; keeping the sound on the phone needs Android 13.
+            audio = prefs.audio && sdk >= 30,
+            audioKeepOnDevice = prefs.audioKeepOnPhone && sdk >= 33,
+        )
         val forward = Adb.run("-s", serial, "forward", "tcp:0", "localabstract:${options.socketName}")
         val pcPort = forward.output.lines().firstNotNullOfOrNull { it.trim().toIntOrNull() }
         if (!forward.ok || pcPort == null) throw IOException("forward failed: ${forward.output}")
@@ -192,9 +222,14 @@ class MirrorController(private val scope: CoroutineScope, private val screenshot
         drain(process)
 
         // The server sends device meta only after every socket is connected: read the dummy
-        // byte on video, connect control, then read the rest of the header.
+        // byte on video, connect audio and control (in that order), then read the rest.
         val (video, stream) = connectVideo(pcPort)
         track(video)
+        if (options.audio) {
+            val audioSocket = Socket("127.0.0.1", pcPort).apply { tcpNoDelay = true }
+            track(audioSocket)
+            startAudio(audioSocket)
+        }
         val control = Socket("127.0.0.1", pcPort).apply { tcpNoDelay = true }
         track(control)
         val queue = Channel<ByteArray>(Channel.UNLIMITED)
@@ -210,6 +245,35 @@ class MirrorController(private val scope: CoroutineScope, private val screenshot
         }.apply { isDaemon = true; name = "scrcpy-control-in"; start() }
 
         pump(stream, header, serial, controllable = true)
+    }
+
+    /**
+     * Plays the audio socket on its own thread. The socket is always drained, even without an
+     * output device or when muted, so the server never blocks on it.
+     */
+    private fun startAudio(socket: Socket) {
+        Thread {
+            runCatching {
+                val stream = ScrcpyAudioStream(socket.getInputStream().buffered(64 * 1024))
+                val start = stream.readStart()
+                if (start is ScrcpyAudioStream.Start.Unsupported) System.err.println("DroidLink: unexpected audio codec $start")
+                val output = if (start == ScrcpyAudioStream.Start.Raw) PcmPlayer.open() else null
+                if (output != null && socket.isClosed) {
+                    // The mirror ended while the output device was opening.
+                    output.close()
+                    return@runCatching
+                }
+                if (output != null) {
+                    player = output
+                    track(output)
+                    _audio.value = Audio.PLAYING
+                }
+                while (true) {
+                    val pcm = stream.readPcm() ?: break
+                    output?.play(pcm)
+                }
+            }
+        }.apply { isDaemon = true; name = "scrcpy-audio"; start() }
     }
 
     /** Reads and decodes until the stream ends or the job is cancelled. */
@@ -276,6 +340,8 @@ class MirrorController(private val scope: CoroutineScope, private val screenshot
     }
 
     private fun cleanup() {
+        player = null
+        _audio.value = Audio.OFF
         val toClose = synchronized(resources) { resources.toList().also { resources.clear() } }
         toClose.asReversed().forEach { runCatching { it.close() } }
     }

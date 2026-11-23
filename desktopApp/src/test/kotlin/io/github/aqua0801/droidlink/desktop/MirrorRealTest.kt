@@ -30,7 +30,7 @@ class MirrorRealTest {
             ?.get(0) ?: error("no physical device on adb")
 
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-        val mirror = MirrorController(scope, kotlin.io.path.createTempDirectory("mirror").toFile())
+        val mirror = MirrorController(scope, kotlin.io.path.createTempDirectory("mirror").toFile()) { MirrorSettings() }
         try {
             runBlocking {
                 mirror.startAdb(serial)

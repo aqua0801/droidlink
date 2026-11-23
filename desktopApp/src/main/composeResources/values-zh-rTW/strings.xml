@@ -188,6 +188,13 @@
     <string name="mirror_declined">手機拒絕了投影</string>
     <string name="mirror_no_answer">手機沒有回應（請確認手機上的通知）</string>
     <string name="mirror_view_only">無線投影只能觀看，要操控請改用 USB（加強模式）</string>
+    <string name="settings_mirror">螢幕投影</string>
+    <string name="mirror_audio">手機聲音</string>
+    <string name="mirror_audio_desc">透過 ADB 投影時，在電腦上播放手機的聲音（Android 11 以上）。下次開始投影時生效。</string>
+    <string name="mirror_audio_keep">手機也同時發聲</string>
+    <string name="mirror_audio_keep_desc">手機喇叭也繼續播放（Android 13 以上）。關閉時，聲音只在電腦播放，手機保持靜音。</string>
+    <string name="mirror_mute">手機聲音靜音</string>
+    <string name="mirror_unmute">取消手機聲音靜音</string>
     <string name="settings_sync">同步資料夾</string>
     <string name="sync_folder_desc">這個資料夾會推送到手機。電腦是唯一來源：只會把手機缺少或內容不同的檔案覆蓋過去，手機上的修改不會傳回電腦。</string>
     <string name="sync_choose_title">選擇同步資料夾</string>

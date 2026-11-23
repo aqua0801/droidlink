@@ -189,6 +189,13 @@
     <string name="mirror_declined">The phone declined mirroring</string>
     <string name="mirror_no_answer">The phone did not respond (check the notification on the phone)</string>
     <string name="mirror_view_only">Wireless mirroring is view only. To control the phone, use USB (enhanced mode).</string>
+    <string name="settings_mirror">Screen mirroring</string>
+    <string name="mirror_audio">Phone audio</string>
+    <string name="mirror_audio_desc">Play the phone’s sound on the PC while mirroring over ADB (Android 11+). Takes effect the next time mirroring starts.</string>
+    <string name="mirror_audio_keep">Also play on the phone</string>
+    <string name="mirror_audio_keep_desc">Keep the sound on the phone’s speaker too (Android 13+). Off: the phone stays silent while its audio plays on the PC.</string>
+    <string name="mirror_mute">Mute phone audio</string>
+    <string name="mirror_unmute">Unmute phone audio</string>
     <string name="settings_sync">Sync folder</string>
     <string name="sync_folder_desc">This folder is pushed to phones. The PC is the only source: only files that are missing or different on the phone are overwritten, and changes on the phone are never sent back.</string>
     <string name="sync_choose_title">Choose sync folder</string>

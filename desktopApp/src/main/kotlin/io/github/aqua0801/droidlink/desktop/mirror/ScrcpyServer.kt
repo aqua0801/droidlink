@@ -10,7 +10,7 @@ import java.io.File
  *   adb push <jar> REMOTE_JAR
  *   adb forward tcp:0 localabstract:scrcpy_<scid>
  *   adb shell CLASSPATH=REMOTE_JAR app_process / com.genymobile.scrcpy.Server VERSION <options>
- *   connect to the forwarded port: first the video socket (then control, in stage 2)
+ *   connect to the forwarded port: video socket, then audio (if enabled), then control
  */
 object ScrcpyServer {
     const val VERSION = "5.0.1"
@@ -25,8 +25,15 @@ object ScrcpyServer {
         val maxFps: Int = 60,
         val videoBitRate: Int = 8_000_000,
         val codec: VideoCodec = VideoCodec.H264,
-        /** Stage 2 turns this on (second socket for input events). */
+        /** Socket for input events. */
         val control: Boolean = false,
+        /** Audio socket with raw PCM (Android 11+; the server reports "disabled" below that). */
+        val audio: Boolean = false,
+        /**
+         * Keep playing on the phone too (Android 13+). Otherwise the server captures the whole
+         * audio output, which mutes the phone's speaker while mirroring.
+         */
+        val audioKeepOnDevice: Boolean = false,
     ) {
         val socketName: String get() = "scrcpy_%08x".format(scid)
 
@@ -34,7 +41,7 @@ object ScrcpyServer {
             "scid=%08x".format(scid),
             "log_level=info",
             "tunnel_forward=true",
-            "audio=false",
+            "audio=$audio",
             "control=$control",
             "cleanup=true",
             // DroidLink has its own clipboard sync; keep the server's out of the way.
@@ -43,7 +50,12 @@ object ScrcpyServer {
             "max_size=$maxSize",
             "max_fps=$maxFps",
             "video_bit_rate=$videoBitRate",
-        )
+        ) + if (!audio) {
+            emptyList()
+        } else {
+            listOf("audio_codec=raw") +
+                if (audioKeepOnDevice) listOf("audio_source=playback", "audio_dup=true") else emptyList()
+        }
     }
 
     fun shellArgs(options: Options): List<String> =

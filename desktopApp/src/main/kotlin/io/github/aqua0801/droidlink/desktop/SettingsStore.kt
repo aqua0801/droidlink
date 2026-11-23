@@ -63,6 +63,15 @@ data class SyncSettings(
     val mirror: Boolean = false,
 )
 
+/** Mirroring over ADB (scrcpy). */
+@Serializable
+data class MirrorSettings(
+    /** Forward the phone's audio (Android 11+). */
+    val audio: Boolean = true,
+    /** Keep the sound on the phone as well (Android 13+); otherwise it only plays on the PC. */
+    val audioKeepOnPhone: Boolean = false,
+)
+
 @Serializable
 data class DesktopSettings(
     val theme: ThemeMode = ThemeMode.SYSTEM,
@@ -74,6 +83,7 @@ data class DesktopSettings(
     val battery: BatteryAlertSettings = BatteryAlertSettings(),
     val notifications: NotificationSettings = NotificationSettings(),
     val sync: SyncSettings = SyncSettings(),
+    val mirror: MirrorSettings = MirrorSettings(),
 )
 
 class SettingsStore(private val file: File) {

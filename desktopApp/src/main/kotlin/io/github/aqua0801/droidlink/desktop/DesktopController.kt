@@ -93,7 +93,7 @@ class DesktopController(
     val agent = AgentController(scope)
 
     /** Phone screen over ADB (scrcpy-server); see docs/screen-mirror.md. */
-    val mirror = MirrorController(scope, File(paths.downloadsDir, DesktopIncomingFiles.SCREENSHOTS))
+    val mirror = MirrorController(scope, File(paths.downloadsDir, DesktopIncomingFiles.SCREENSHOTS)) { settings.settings.value.mirror }
 
     /** Clipboard modes, hotkeys and routing between the PC, P2P phones and enhanced mode. */
     val clipboardRouting = ClipboardCoordinator(scope, settings, agent, notifier) { sessions.values }

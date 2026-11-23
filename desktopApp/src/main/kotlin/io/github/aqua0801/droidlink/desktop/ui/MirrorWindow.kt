@@ -59,6 +59,8 @@ import io.github.aqua0801.droidlink.desktop.resources.ic_arrow_back
 import io.github.aqua0801.droidlink.desktop.resources.ic_home
 import io.github.aqua0801.droidlink.desktop.resources.ic_keep
 import io.github.aqua0801.droidlink.desktop.resources.ic_keep_off
+import io.github.aqua0801.droidlink.desktop.resources.ic_music_note
+import io.github.aqua0801.droidlink.desktop.resources.ic_music_off
 import io.github.aqua0801.droidlink.desktop.resources.ic_photo_camera
 import io.github.aqua0801.droidlink.desktop.resources.ic_power_settings_new
 import io.github.aqua0801.droidlink.desktop.resources.ic_screen_rotation
@@ -68,6 +70,7 @@ import io.github.aqua0801.droidlink.desktop.resources.mirror_back
 import io.github.aqua0801.droidlink.desktop.resources.mirror_declined
 import io.github.aqua0801.droidlink.desktop.resources.mirror_failed
 import io.github.aqua0801.droidlink.desktop.resources.mirror_home
+import io.github.aqua0801.droidlink.desktop.resources.mirror_mute
 import io.github.aqua0801.droidlink.desktop.resources.mirror_no_answer
 import io.github.aqua0801.droidlink.desktop.resources.mirror_pin
 import io.github.aqua0801.droidlink.desktop.resources.mirror_power
@@ -78,19 +81,20 @@ import io.github.aqua0801.droidlink.desktop.resources.mirror_shot_failed
 import io.github.aqua0801.droidlink.desktop.resources.mirror_shot_saved
 import io.github.aqua0801.droidlink.desktop.resources.mirror_starting
 import io.github.aqua0801.droidlink.desktop.resources.mirror_title
+import io.github.aqua0801.droidlink.desktop.resources.mirror_unmute
 import io.github.aqua0801.droidlink.desktop.resources.mirror_unpin
-import io.github.aqua0801.droidlink.desktop.resources.mirror_volume_down
 import io.github.aqua0801.droidlink.desktop.resources.mirror_view_only
+import io.github.aqua0801.droidlink.desktop.resources.mirror_volume_down
 import io.github.aqua0801.droidlink.desktop.resources.mirror_volume_up
 import io.github.aqua0801.droidlink.desktop.resources.mirror_waiting_phone
+import java.awt.Toolkit
+import java.awt.datatransfer.DataFlavor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
-import java.awt.Toolkit
-import java.awt.datatransfer.DataFlavor
 
 private val ToolbarHeight = 48.dp
 
@@ -105,6 +109,7 @@ fun MirrorWindow(mirror: MirrorController, dark: Boolean) {
     val state by mirror.state.collectAsState()
     if (state is MirrorState.Idle) return
     val frame by mirror.frame.collectAsState()
+    val audio by mirror.audio.collectAsState()
     val windowState = rememberWindowState(size = DpSize(420.dp, 900.dp))
     var pinned by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf<StringResource?>(null) }
@@ -202,6 +207,14 @@ fun MirrorWindow(mirror: MirrorController, dark: Boolean) {
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
+                            )
+                        }
+                        if (audio != MirrorController.Audio.OFF) {
+                            val muted = audio == MirrorController.Audio.MUTED
+                            IconAction(
+                                if (muted) Res.drawable.ic_music_off else Res.drawable.ic_music_note,
+                                stringResource(if (muted) Res.string.mirror_unmute else Res.string.mirror_mute),
+                                { mirror.toggleMute() },
                             )
                         }
                         IconAction(Res.drawable.ic_photo_camera, stringResource(Res.string.mirror_screenshot), {

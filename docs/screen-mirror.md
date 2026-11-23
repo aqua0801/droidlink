@@ -48,7 +48,18 @@
 - [x] 協定訊息、`LinkServer` 的 stream 分流、`LinkClient.openStream`、測試。
 - [x] 手機：通知 → 同意 → 前景服務 → 編碼；旋轉時重設 VirtualDisplay 大小；通知上有「停止投影」。
 - [x] 電腦：裝置列「無線投影」按鈕；投影視窗只留截圖和置頂。
+- [x] 實機驗證。
+
+## 第 4 階段：聲音（ADB 投影）
+
+- 依 v5.0.1 協定：socket 順序是 video → audio → control；audio socket 先送 u32 codec id（`0` = 裝置停用，例如 Android 10 以下；`1` = 擷取失敗），之後是與影像相同的 12-byte 標頭封包，沒有 session packet。
+- 要求 `audio_codec=raw`（16-bit LE PCM，48 kHz 立體聲）：adb 上約 1.5 Mbps，不用解碼、延遲最低。
+- 電腦端用 `javax.sound.sampled` 播放（Windows、Linux 都有），保留約 40 ms 緩衝；佇列超過 120 ms 就丟封包，讓聲音不會落後畫面。沒有輸出裝置時照樣讀完 socket，避免 server 卡住。
+- 設定：「手機聲音」（Android 11+，預設開）、「手機也同時發聲」（Android 13+，`audio_source=playback` + `audio_dup=true`；關閉時用預設的 output 來源，手機喇叭靜音）。啟動前用 `getprop ro.build.version.sdk` 判斷版本，不支援就不開。
+- 投影視窗工具列多了靜音切換（只有在有聲音時顯示）。
+- [x] 協定、播放、設定、測試。
 - [ ] 實機驗證。
+- [ ] 無線投影的聲音（需要手機端 AudioPlaybackCapture + 編碼，之後再評估）。
 
 ## 備忘
 

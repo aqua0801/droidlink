@@ -184,6 +184,17 @@ fun SettingsScreen(controller: DesktopController, onBack: () -> Unit) {
                 }
             }
 
+            Section(stringResource(Res.string.settings_mirror)) {
+                SwitchOption(settings.mirror.audio, Res.string.mirror_audio, Res.string.mirror_audio_desc) { on ->
+                    update { it.copy(mirror = it.mirror.copy(audio = on)) }
+                }
+                if (settings.mirror.audio) {
+                    SwitchOption(settings.mirror.audioKeepOnPhone, Res.string.mirror_audio_keep, Res.string.mirror_audio_keep_desc) { on ->
+                        update { it.copy(mirror = it.mirror.copy(audioKeepOnPhone = on)) }
+                    }
+                }
+            }
+
             Section(stringResource(Res.string.settings_files)) {
                 Text(stringResource(Res.string.settings_downloads), style = MaterialTheme.typography.bodyMedium)
                 Text(controller.downloadsDir.absolutePath, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
