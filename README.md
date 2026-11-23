@@ -179,10 +179,17 @@ permission to talk to the phone over USB: most distributions ship udev rules in 
 The firewall must allow incoming TCP on port 47100 (and mDNS, UDP 5353) for the phone to
 connect, e.g. `sudo ufw allow 47100/tcp`.
 
+## Troubleshooting
+
+**Pairing or connecting times out.** The phone must reach one of the addresses listed under
+the pairing QR code. Either keep both devices on the same LAN, or install Tailscale on **both**
+the phone and the PC (the PC then also lists its `100.x` address). A PC inside a virtual
+machine needs bridged networking; with NAT the phone can't reach it.
+
 ## Known limitations
 
-- The desktop app is developed on Windows; Linux is tested on Ubuntu 24.04 (WSLg and an X11
-  session) but not yet on a full GNOME or KDE desktop.
+- The desktop app is developed on Windows; Linux is tested on Ubuntu 24.04 with GNOME (Wayland
+  and Xorg sessions), not yet on KDE or other desktops.
 - Without enhanced mode, phone → PC clipboard sync is manual (selection menu, share sheet or
   quick settings tile), because Android 10+ only lets the foreground app read the clipboard.
 - Wireless mirroring is view only. On Android 15+, the system hides sensitive content such as

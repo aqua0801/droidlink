@@ -1,8 +1,9 @@
 # Third-party notices
 
 DroidLink is released under the [MIT License](LICENSE). The apps bundle or depend on the
-components below, each under its own license. Release binaries (the Android APK and the
-Windows installer) contain these components; this file is published with every release.
+components below, each under its own license. Release binaries (the Android APK, the Windows
+installer and the Linux packages) contain these components; this file is published with every
+release.
 
 ## Bundled binaries
 
@@ -19,7 +20,7 @@ The unmodified `scrcpy-server-v5.0.1` release binary (SHA-256
 enhanced mode to capture the screen. Its license text is next to it in
 `LICENSE-scrcpy.txt`, and is included inside the desktop app.
 
-### FFmpeg via bytedeco presets (desktop app, Windows x86_64 natives)
+### FFmpeg via bytedeco presets (desktop app)
 
 - `org.bytedeco:ffmpeg:8.1.2-1.5.14` — FFmpeg, licensed under the GNU Lesser General Public
   License v2.1 or later. This is the default LGPL build, not the `-gpl` artifact; do not
@@ -29,13 +30,16 @@ enhanced mode to capture the screen. Its license text is next to it in
   - Build scripts used for these binaries: https://github.com/bytedeco/javacpp-presets/tree/master/ffmpeg
 - `org.bytedeco:javacpp:1.5.14` — Apache License 2.0
 
-FFmpeg is loaded as separate shared libraries from the `ffmpeg-*-windows-x86_64.jar` in the
-installed app's `app` folder, and can be replaced with a compatible build.
+Each desktop package contains the natives for its own platform (`windows-x86_64` in the
+Windows installer, `linux-x86_64` in the Linux packages). FFmpeg is loaded as separate shared
+libraries from the `ffmpeg-*-<platform>.jar` in the installed app's `app` folder (`lib/app`
+in the Linux packages), and can be replaced with a compatible build.
 
-### Java runtime (Windows installer)
+### Java runtime (desktop packages)
 
-The Windows installer contains a Java runtime created with `jlink` from Eclipse Temurin 21
-(OpenJDK), licensed under the GNU General Public License v2 with the Classpath Exception.
+The Windows installer and the Linux `.deb` / `.tar.gz` each contain a Java runtime created with
+`jlink` from Eclipse Temurin 21 (OpenJDK), licensed under the GNU General Public License v2
+with the Classpath Exception.
 
 - Source and license: https://adoptium.net/ and https://openjdk.org/legal/gplv2+ce.html
 
