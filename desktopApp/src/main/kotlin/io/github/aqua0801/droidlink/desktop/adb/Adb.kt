@@ -1,5 +1,6 @@
 package io.github.aqua0801.droidlink.desktop.adb
 
+import io.github.aqua0801.droidlink.desktop.platform.Os
 import java.io.File
 import java.util.concurrent.TimeUnit
 
@@ -13,7 +14,7 @@ object Adb {
         val ok: Boolean get() = exitCode == 0
     }
 
-    val isWindows: Boolean get() = System.getProperty("os.name").lowercase().contains("win")
+    val isWindows: Boolean get() = Os.isWindows
 
     /** Resolved once: DROIDLINK_ADB override, then PATH, then the Android SDK's platform-tools. */
     val executable: String? by lazy { locate() }
@@ -30,7 +31,17 @@ object Adb {
 
     private fun sdkDir(): File? =
         (System.getenv("ANDROID_HOME") ?: System.getenv("ANDROID_SDK_ROOT"))?.let(::File)?.takeIf(File::isDirectory)
-            ?: System.getenv("LOCALAPPDATA")?.let { File(it, "Android/Sdk") }?.takeIf(File::isDirectory)
+            ?: defaultSdkDirs().firstOrNull(File::isDirectory)
+
+    /** Where Android Studio installs the SDK by default. */
+    private fun defaultSdkDirs(): List<File> {
+        val home = System.getProperty("user.home")
+        return when {
+            Os.isWindows -> listOfNotNull(System.getenv("LOCALAPPDATA")?.let { File(it, "Android/Sdk") })
+            Os.isMac -> listOf(File(home, "Library/Android/sdk"))
+            else -> listOf(File(home, "Android/Sdk"))
+        }
+    }
 
     /** Runs adb with [args], merging stdout and stderr. Blocks up to [timeoutMs]. */
     fun run(vararg args: String, timeoutMs: Long = 15_000): Result {

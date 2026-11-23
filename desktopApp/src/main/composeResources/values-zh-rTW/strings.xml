@@ -144,6 +144,7 @@
     <string name="hotkey_active">已啟用</string>
     <string name="hotkey_conflict">這組按鍵已被其他程式占用，請換一組。</string>
     <string name="hotkey_unsupported">此系統暫不支援全域快捷鍵。</string>
+    <string name="hotkey_unsupported_wayland">Wayland 不允許 app 註冊全域快捷鍵。要使用快捷鍵，請改用 X11 工作階段登入。</string>
     <string name="hotkey_inactive">選擇上方對應的模式後才會啟用。</string>
     <string name="settings_battery">手機電量提醒</string>
     <string name="alert_battery_low">低電量提醒</string>

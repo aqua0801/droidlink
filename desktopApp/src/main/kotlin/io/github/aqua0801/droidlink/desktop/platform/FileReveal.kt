@@ -4,29 +4,51 @@ import java.awt.Desktop
 import java.io.File
 
 /**
- * Opens files and folders in the OS shell. Platform-specific so Linux file managers can get
- * proper "show in folder" support later; for now non-Windows just opens the folder.
+ * Opens files and folders in the OS shell.
+ * - Windows: the shell via java.awt.Desktop; "show in folder" via `explorer /select`.
+ * - Linux: `xdg-open`, which follows the user's default apps on any desktop. "Show in folder"
+ *   asks the file manager over D-Bus (org.freedesktop.FileManager1, supported by Nautilus,
+ *   Dolphin, Nemo, Thunar, ...) and falls back to opening the folder.
  */
 object FileReveal {
-    private val isWindows = System.getProperty("os.name").lowercase().contains("win")
-
-    fun open(file: File) = background { Desktop.getDesktop().open(file) }
+    fun open(file: File) = background { openPath(file) }
 
     fun openFolder(dir: File) = background {
         dir.mkdirs()
-        Desktop.getDesktop().open(dir)
+        openPath(dir)
     }
 
-    /** Opens the containing folder with the file selected (Windows), or just the folder. */
+    /** Opens the containing folder with the file selected where the platform allows it. */
     fun reveal(file: File) = background {
-        if (isWindows && file.exists()) {
-            ProcessBuilder("explorer.exe", "/select,", file.absolutePath).start()
-        } else {
-            Desktop.getDesktop().open(file.parentFile)
+        when {
+            Os.isWindows && file.exists() -> ProcessBuilder("explorer.exe", "/select,", file.absolutePath).start()
+            Os.isLinux && file.exists() && showItemOverDbus(file) -> Unit
+            else -> openPath(file.parentFile)
         }
     }
 
-    // Desktop.open can block for a moment; keep it off the UI thread.
+    private fun openPath(file: File) {
+        if (Os.isLinux && Os.which("xdg-open") != null) {
+            Os.launch("xdg-open", file.absolutePath)
+        } else {
+            Desktop.getDesktop().open(file)
+        }
+    }
+
+    private fun showItemOverDbus(file: File): Boolean {
+        if (Os.which("gdbus") == null) return false
+        val uri = file.toURI().toASCIIString().replace("'", "%27")
+        val result = Os.run(
+            "gdbus", "call", "--session",
+            "--dest", "org.freedesktop.FileManager1",
+            "--object-path", "/org/freedesktop/FileManager1",
+            "--method", "org.freedesktop.FileManager1.ShowItems",
+            "['$uri']", "",
+        )
+        return result?.first == 0
+    }
+
+    // Opening can block for a moment; keep it off the UI thread.
     private fun background(action: () -> Unit) {
         Thread { runCatching(action) }.apply { isDaemon = true; start() }
     }

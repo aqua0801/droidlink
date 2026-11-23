@@ -12,7 +12,6 @@ import java.awt.Window
  * otherwise keeps a light title bar. Other platforms and older Windows builds are a no-op.
  */
 object WindowChrome {
-    private val isWindows = System.getProperty("os.name").orEmpty().startsWith("Windows", ignoreCase = true)
 
     // DWMWA_USE_IMMERSIVE_DARK_MODE: 20 on Windows 10 20H1+ and 11, 19 on earlier Windows 10 builds.
     private const val ATTR_DARK_MODE = 20
@@ -26,7 +25,7 @@ object WindowChrome {
     }
 
     private val dwm: Dwmapi? by lazy {
-        if (!isWindows) null else runCatching { Native.load("dwmapi", Dwmapi::class.java) }.getOrNull()
+        if (!Os.isWindows) null else runCatching { Native.load("dwmapi", Dwmapi::class.java) }.getOrNull()
     }
 
     fun setDarkTitleBar(window: Window, dark: Boolean) {

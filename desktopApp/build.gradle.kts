@@ -20,6 +20,22 @@ kotlin {
     }
 }
 
+/** bytedeco classifier for the build machine: windows-x86_64, linux-x86_64, linux-arm64, ... */
+val nativeClassifier: String = run {
+    val os = System.getProperty("os.name").lowercase()
+    val arch = when (System.getProperty("os.arch").lowercase()) {
+        "amd64", "x86_64" -> "x86_64"
+        "aarch64", "arm64" -> "arm64"
+        else -> error("unsupported architecture: ${System.getProperty("os.arch")}")
+    }
+    when {
+        os.startsWith("windows") -> "windows-$arch"
+        os.startsWith("linux") -> "linux-$arch"
+        os.startsWith("mac") -> "macosx-$arch"
+        else -> error("unsupported OS: $os")
+    }
+}
+
 dependencies {
     implementation(project(":shared"))
     implementation(compose.desktop.currentOs)
@@ -31,12 +47,12 @@ dependencies {
     implementation(libs.jna)
     implementation(libs.jna.platform)
 
-    // Screen mirroring: FFmpeg (LGPL build) via bytedeco. Natives only for Windows x86_64,
-    // the one packaged target so far; add other classifiers when Linux is packaged.
+    // Screen mirroring: FFmpeg (LGPL build) via bytedeco, with the natives of the OS that builds
+    // the package (jpackage only packages for the OS it runs on, like compose.desktop.currentOs).
     implementation(libs.bytedeco.ffmpeg)
     implementation(libs.bytedeco.javacpp)
-    implementation(variantOf(libs.bytedeco.ffmpeg) { classifier("windows-x86_64") })
-    implementation(variantOf(libs.bytedeco.javacpp) { classifier("windows-x86_64") })
+    implementation(variantOf(libs.bytedeco.ffmpeg) { classifier(nativeClassifier) })
+    implementation(variantOf(libs.bytedeco.javacpp) { classifier(nativeClassifier) })
 
     testImplementation(libs.kotlin.test)
 }
@@ -78,7 +94,8 @@ compose.desktop {
         javaHome = packagingJdk.get().metadata.installationPath.asFile.absolutePath
 
         nativeDistributions {
-            targetFormats(TargetFormat.Msi, TargetFormat.Exe, TargetFormat.Deb)
+            // Windows builds produce Msi/Exe, Linux builds Deb/Rpm (jpackage targets the host OS).
+            targetFormats(TargetFormat.Msi, TargetFormat.Exe, TargetFormat.Deb, TargetFormat.Rpm)
             packageName = "DroidLink"
             packageVersion = providers.gradleProperty("droidlink.version").get()
             description = "Phone-to-PC developer companion"
@@ -96,6 +113,16 @@ compose.desktop {
                 perUserInstall = true
                 // Fixed so a newer installer upgrades the existing install instead of adding a second one.
                 upgradeUuid = "6b3f2d0e-8c1a-4e5b-9f7d-2a4c6e8b1d30"
+            }
+
+            linux {
+                // Debian and RPM package names must be lowercase.
+                packageName = "droidlink"
+                iconFile.set(project.file("packaging/droidlink.png"))
+                menuGroup = "Development"
+                appCategory = "Development"
+                shortcut = true
+                debMaintainer = "aqua0801@users.noreply.github.com"
             }
         }
     }

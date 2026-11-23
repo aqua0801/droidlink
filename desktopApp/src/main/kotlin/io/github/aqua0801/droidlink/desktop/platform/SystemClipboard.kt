@@ -12,7 +12,9 @@ import java.util.concurrent.TimeUnit
 
 /**
  * OS clipboard access. Text only for now.
- * Platform-specific so Linux (X11 / Wayland data-control) can get its own implementation.
+ * Linux uses [PollingClipboard] through AWT (X11 selections). On Wayland the compositor only
+ * shares the clipboard with a focused window, so changes made while DroidLink is in the
+ * background may be noticed only once it gets focus.
  */
 interface SystemClipboard {
     /** Invokes [onText] on a background thread whenever the clipboard's text changes. */
@@ -25,8 +27,7 @@ interface SystemClipboard {
 
     companion object {
         fun create(): SystemClipboard {
-            val isWindows = System.getProperty("os.name").lowercase().contains("win")
-            if (isWindows) {
+            if (Os.isWindows) {
                 runCatching { return WindowsClipboard() }
                     .onFailure { System.err.println("DroidLink: Windows clipboard watcher unavailable, polling instead: $it") }
             }

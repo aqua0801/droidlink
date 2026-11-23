@@ -16,7 +16,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import io.github.aqua0801.droidlink.desktop.platform.Os
 import io.github.aqua0801.droidlink.desktop.platform.SwingTray
+import io.github.aqua0801.droidlink.desktop.platform.TrayNotifier
 import io.github.aqua0801.droidlink.desktop.platform.WindowChrome
 import io.github.aqua0801.droidlink.desktop.resources.Res
 import io.github.aqua0801.droidlink.desktop.resources.app_name
@@ -32,7 +34,10 @@ import io.github.aqua0801.droidlink.desktop.ui.SettingsScreen
 import io.github.aqua0801.droidlink.desktop.ui.isDarkTheme
 import io.github.aqua0801.droidlink.shared.settings.AppLanguage
 import java.awt.EventQueue
+import java.awt.image.BufferedImage
+import java.io.File
 import java.util.Locale
+import javax.imageio.ImageIO
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -40,13 +45,15 @@ import kotlinx.coroutines.cancel
 import org.jetbrains.compose.resources.stringResource
 
 fun main() {
+    val iconImage = AppIcon.toAwtImage(Density(1f), LayoutDirection.Ltr, Size(128f, 128f))
     // AWT/Swing objects belong on the event thread.
     val (tray, trayAvailable) = runOnEventThread {
-        val icon = SwingTray(AppIcon.toAwtImage(Density(1f), LayoutDirection.Ltr, Size(64f, 64f)), "DroidLink")
+        val icon = SwingTray(iconImage, "DroidLink")
         icon to icon.install()
     }
+    val notifier = TrayNotifier.create(tray.takeIf { trayAvailable }, notificationIcon(iconImage))
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    val controller = DesktopController(appScope, tray)
+    val controller = DesktopController(appScope, notifier)
     UiLocale.apply(controller.settings.settings.value.language)
     controller.start()
 
@@ -133,4 +140,18 @@ private fun <T> runOnEventThread(block: () -> T): T {
     var result: Result<T>? = null
     EventQueue.invokeAndWait { result = runCatching(block) }
     return result!!.getOrThrow()
+}
+
+/** Linux notification services take the icon as a file path; writes the app icon once. */
+private fun notificationIcon(image: java.awt.Image): File? {
+    if (!Os.isLinux) return null
+    return runCatching {
+        val file = File(AppPaths.default().dir, "icon.png")
+        if (!file.isFile) {
+            val pixels = BufferedImage(image.getWidth(null), image.getHeight(null), BufferedImage.TYPE_INT_ARGB)
+            pixels.createGraphics().apply { drawImage(image, 0, 0, null); dispose() }
+            ImageIO.write(pixels, "png", file)
+        }
+        file
+    }.getOrNull()
 }

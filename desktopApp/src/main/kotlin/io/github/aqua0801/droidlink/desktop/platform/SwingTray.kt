@@ -24,12 +24,16 @@ import javax.swing.event.PopupMenuListener
  * JVM default charset, which is UTF-8 since JDK 18 (JEP 400), so anything outside ASCII
  * (Chinese, "…") is drawn as boxes. A Swing JPopupMenu is drawn by Java2D and has no such issue.
  * Call everything except [notify] on the AWT event thread (Compose already runs there).
+ *
+ * Linux: AWT can only use the old XEmbed tray (KDE, Xfce, Cinnamon, ...). GNOME and WSLg have
+ * none, so [install] returns false there and the app runs without a tray icon.
  */
-class SwingTray(image: Image, tooltip: String) : TrayNotifier {
+class SwingTray(private val image: Image, private var tooltip: String) : TrayNotifier {
     /** A menu entry; null in [setMenu] adds a separator. */
     class Item(val label: String, val onClick: () -> Unit)
 
-    private val icon = TrayIcon(image, tooltip).apply { isImageAutoSize = true }
+    // Created in install(): the constructor throws where the platform has no tray.
+    private var icon: TrayIcon? = null
     private var items: List<Item?> = emptyList()
     private var host: JDialog? = null
 
@@ -39,18 +43,21 @@ class SwingTray(image: Image, tooltip: String) : TrayNotifier {
     init {
         // Native look for the menu (the folder chooser sets the same look and feel).
         runCatching { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()) }
-        icon.addActionListener { onAction() }
-        icon.addMouseListener(object : MouseAdapter() {
-            override fun mousePressed(e: MouseEvent) = maybeShowMenu(e)
-            override fun mouseReleased(e: MouseEvent) = maybeShowMenu(e)
-        })
     }
 
     /** Adds the icon to the system tray. Returns false when the platform has no tray. */
     fun install(): Boolean {
         if (!SystemTray.isSupported()) return false
+        val trayIcon = runCatching { TrayIcon(image, tooltip) }.getOrNull() ?: return false
+        trayIcon.isImageAutoSize = true
+        trayIcon.addActionListener { onAction() }
+        trayIcon.addMouseListener(object : MouseAdapter() {
+            override fun mousePressed(e: MouseEvent) = maybeShowMenu(e)
+            override fun mouseReleased(e: MouseEvent) = maybeShowMenu(e)
+        })
         return try {
-            SystemTray.getSystemTray().add(icon)
+            SystemTray.getSystemTray().add(trayIcon)
+            icon = trayIcon
             true
         } catch (_: AWTException) {
             false
@@ -59,11 +66,13 @@ class SwingTray(image: Image, tooltip: String) : TrayNotifier {
 
     fun remove() {
         host?.dispose()
-        if (SystemTray.isSupported()) SystemTray.getSystemTray().remove(icon)
+        icon?.let { SystemTray.getSystemTray().remove(it) }
+        icon = null
     }
 
     fun setTooltip(text: String) {
-        icon.toolTip = text
+        tooltip = text
+        icon?.toolTip = text
     }
 
     fun setMenu(entries: List<Item?>) {
@@ -71,7 +80,7 @@ class SwingTray(image: Image, tooltip: String) : TrayNotifier {
     }
 
     override fun notify(title: String, message: String) {
-        EventQueue.invokeLater { icon.displayMessage(title, message, TrayIcon.MessageType.INFO) }
+        EventQueue.invokeLater { icon?.displayMessage(title, message, TrayIcon.MessageType.INFO) }
     }
 
     private fun maybeShowMenu(e: MouseEvent) {

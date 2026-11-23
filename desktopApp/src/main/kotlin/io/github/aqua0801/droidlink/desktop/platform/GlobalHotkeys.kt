@@ -12,8 +12,9 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 /**
- * System-wide keyboard shortcuts. Platform-specific: Windows uses RegisterHotKey; Linux
- * (X11 XGrabKey / the Wayland GlobalShortcuts portal) can be added behind this interface.
+ * System-wide keyboard shortcuts: RegisterHotKey on Windows, XGrabKey on X11 sessions
+ * ([X11GlobalHotkeys]). Wayland sessions report unsupported: compositors don't let apps grab
+ * keys (the GlobalShortcuts portal could be added here later).
  */
 interface GlobalHotkeys : Closeable {
     val isSupported: Boolean
@@ -22,14 +23,25 @@ interface GlobalHotkeys : Closeable {
     fun setBindings(bindings: Map<Int, Hotkey>): Set<Int>
 
     companion object {
+        /**
+         * Some Wayland compositors can forward keys to X11 apps (KDE: "Legacy X11 App Support"),
+         * so DROIDLINK_X11_HOTKEYS=1 opts in to X11 grabs on Wayland.
+         */
+        private val forceX11 = System.getenv("DROIDLINK_X11_HOTKEYS") == "1"
+
+        /** True when hotkeys are off only because the Wayland session blocks them. */
+        val blockedByWayland: Boolean get() = Os.isWayland && !forceX11
+
         /** [onPressed] is called with the binding id, on a background thread. */
         fun create(onPressed: (Int) -> Unit): GlobalHotkeys {
-            val isWindows = System.getProperty("os.name").lowercase().contains("win")
-            if (isWindows) {
-                runCatching { return WindowsGlobalHotkeys(onPressed) }
-                    .onFailure { System.err.println("DroidLink: global hotkeys unavailable: $it") }
-            }
-            return UnsupportedGlobalHotkeys
+            val created = runCatching {
+                when {
+                    Os.isWindows -> WindowsGlobalHotkeys(onPressed)
+                    Os.isLinux && System.getenv("DISPLAY") != null && (!Os.isWayland || forceX11) -> X11GlobalHotkeys(onPressed)
+                    else -> null
+                }
+            }.onFailure { System.err.println("DroidLink: global hotkeys unavailable: $it") }
+            return created.getOrNull() ?: UnsupportedGlobalHotkeys
         }
     }
 }

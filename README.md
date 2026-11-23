@@ -6,8 +6,8 @@ an optional ADB-powered mode for things a normal app isn't allowed to do.
 
 Everything runs on your own devices: there is no server, no account and no cloud relay.
 
-> **Status:** early and actively developed (`0.1.x`). The desktop app targets **Windows 10/11**;
-> it may start on other platforms, but several features below are Windows-only for now.
+> **Status:** early and actively developed (`0.1.x`). The desktop app runs on **Windows 10/11**
+> and **Linux** (x86-64; see [Linux](#linux) for what differs there).
 
 ## Features
 
@@ -97,11 +97,15 @@ On Windows, use `gradlew` instead of `./gradlew`.
 ### Packaging the desktop app
 
 ```shell
-./gradlew :desktopApp:packageExe       # or :desktopApp:packageMsi
+./gradlew :desktopApp:packageExe       # Windows: or :desktopApp:packageMsi
+./scripts/package-linux.sh             # Linux: .deb and a portable .tar.gz -> release/
 ```
 
 Installers bundle their own Java runtime, so users don't need Java installed. Packaging needs a
-full JDK with `jpackage`; Gradle downloads Temurin 21 for this automatically.
+full JDK with `jpackage`; Gradle downloads Temurin 21 for this automatically. `jpackage` only
+builds for the OS it runs on, so Linux packages are built on Linux (or WSL), which also needs
+`dpkg-deb` and `fakeroot`. The script also widens the `.deb` dependencies so the package
+installs on Ubuntu 22.04 / Debian 12 even when built on a newer system.
 
 ### Tests against real devices
 
@@ -129,8 +133,12 @@ run:
 
 ```powershell
 ./scripts/release.ps1            # tests, signed APK, Windows installer, checksums -> release/
+./scripts/release.ps1 -Linux     # also the Linux .deb / .tar.gz, built in WSL from HEAD
 ./scripts/release.ps1 -Publish   # same, then tags and creates the GitHub release
 ```
+
+`-Linux` needs a WSL distribution with a JDK 17+, `dpkg-deb`, `fakeroot` and the Android SDK
+(`ANDROID_HOME`, or `~/Android/Sdk`).
 
 Release notes go in `docs/releases/v<version>.md`. Keep a backup of the keystore: without it,
 new APKs can't be installed over existing ones.
@@ -139,18 +147,42 @@ new APKs can't be installed over existing ones.
 
 | | Location |
 |---|---|
-| Desktop settings and keys | `%APPDATA%\DroidLink\` on Windows, `~/.config/droidlink/` elsewhere |
-| Files received on the PC | `~/Downloads/DroidLink/` (screenshots in `Screenshots/`) |
+| Desktop settings and keys | `%APPDATA%\DroidLink\` on Windows, `$XDG_CONFIG_HOME/droidlink/` (usually `~/.config/droidlink/`) on Linux |
+| Files received on the PC | `DroidLink/` in your Downloads folder (screenshots in `Screenshots/`) |
 | Default PC sync folder | `~/DroidLink Sync/` (configurable) |
 | Files received on the phone | `Download/DroidLink` via MediaStore |
 | Phone sync folder | a folder you pick when setting up sync |
 
 Your device's private key never leaves the device it was created on.
 
+## Linux
+
+Supported: x86-64, Ubuntu 22.04+ / Debian 12+ (the `.deb`); other distributions can use the
+`.tar.gz` (unpack anywhere and run `DroidLink/bin/DroidLink`). It is meant to work on any
+desktop, Wayland or X11, but desktops differ in what they let apps do:
+
+| | X11 session | Wayland session |
+|---|---|---|
+| Tray icon | where the desktop has an XEmbed tray (KDE, Xfce, Cinnamon, MATE) | same; GNOME has no tray, so closing the window quits |
+| Notifications | yes (freedesktop notifications, e.g. `notify-send`) | yes |
+| Global clipboard hotkeys | yes | no: Wayland doesn't let apps register them¹ |
+| Automatic PC → phone clipboard | yes | only notices changes while DroidLink has focus |
+| Dark title bar | follows the window manager | follows the window manager |
+
+¹ KDE Plasma's *Legacy X11 App Support* setting can forward keys to X11 apps on Wayland;
+start DroidLink with `DROIDLINK_X11_HOTKEYS=1` to use them there.
+
+ADB enhanced mode needs `adb` (PATH, `ANDROID_HOME` or `~/Android/Sdk/platform-tools`) and
+permission to talk to the phone over USB: most distributions ship udev rules in an
+`android-sdk-platform-tools-common` / `android-udev` package; otherwise use wireless debugging.
+
+The firewall must allow incoming TCP on port 47100 (and mDNS, UDP 5353) for the phone to
+connect, e.g. `sudo ufw allow 47100/tcp`.
+
 ## Known limitations
 
-- The desktop app is developed and tested on Windows. Global hotkeys, the clipboard watcher,
-  the dark title bar and the bundled FFmpeg decoder are Windows-only for now.
+- The desktop app is developed on Windows; Linux is tested on Ubuntu 24.04 (WSLg and an X11
+  session) but not yet on a full GNOME or KDE desktop.
 - Without enhanced mode, phone → PC clipboard sync is manual (selection menu, share sheet or
   quick settings tile), because Android 10+ only lets the foreground app read the clipboard.
 - Wireless mirroring is view only. On Android 15+, the system hides sensitive content such as

@@ -1,11 +1,13 @@
 <#
 .SYNOPSIS
-    Builds the signed Android APK and the Windows installer for a release.
+    Builds the signed Android APK and the Windows installer for a release, and optionally the
+    Linux packages through WSL.
 
 .DESCRIPTION
     Output goes to ./release/ (gitignored):
         DroidLink-<version>.apk
         DroidLink-<version>-windows-x64.exe
+        DroidLink-<version>-linux-x64.deb / .tar.gz   (with -Linux)
         LICENSE, THIRD_PARTY_NOTICES.md, SHA256SUMS.txt
 
     The version comes from gradle.properties (droidlink.version / droidlink.versionCode).
@@ -14,15 +16,24 @@
 .PARAMETER Publish
     Also create the GitHub release with the gh CLI, using docs/releases/v<version>.md as notes.
 
+.PARAMETER Linux
+    Also build the Linux packages in WSL (scripts/package-linux.sh), from a clean export of
+    HEAD. Needs a WSL distribution with a JDK 17+, dpkg-deb, fakeroot and the Android SDK.
+
+.PARAMETER WslDistro
+    WSL distribution for -Linux; the default distribution if omitted.
+
 .PARAMETER AllowDirty
     Build even if the working tree has uncommitted changes (not recommended for a release).
 
 .EXAMPLE
     ./scripts/release.ps1
-    ./scripts/release.ps1 -Publish
+    ./scripts/release.ps1 -Linux -Publish
 #>
 param(
     [switch]$Publish,
+    [switch]$Linux,
+    [string]$WslDistro,
     [switch]$AllowDirty,
     [string]$JavaHome
 )
@@ -129,6 +140,18 @@ $exeOut = Join-Path $out "DroidLink-$version-windows-x64.exe"
 Copy-Item $apk $apkOut
 Copy-Item $exe.FullName $exeOut
 Copy-Item (Join-Path $root 'LICENSE'), (Join-Path $root 'THIRD_PARTY_NOTICES.md') $out
+
+if ($Linux) {
+    Step 'Building Linux packages in WSL'
+    if (-not (Get-Command wsl -ErrorAction SilentlyContinue)) { Fail 'wsl not found; -Linux needs WSL.' }
+    $distro = @(if ($WslDistro) { '-d', $WslDistro })
+    $toWsl = { param($path) (Native { & wsl @distro -e wslpath -a ($path -replace '\\', '/') }) | Select-Object -Last 1 }
+    $repoWsl = & $toWsl $root
+    $outWsl = & $toWsl $out
+    # --export builds from a clean copy of HEAD inside the Linux filesystem (see the script).
+    Native { & wsl @distro -e bash "$repoWsl/scripts/package-linux.sh" --export $outWsl }
+    if ($LASTEXITCODE -ne 0) { Fail 'Linux packaging failed.' }
+}
 
 $sums = Get-ChildItem $out -File | Where-Object Name -ne 'SHA256SUMS.txt' | ForEach-Object {
     '{0}  {1}' -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name

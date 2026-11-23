@@ -1,5 +1,6 @@
 package io.github.aqua0801.droidlink.desktop.hotkey
 
+import io.github.aqua0801.droidlink.desktop.platform.Os
 import kotlinx.serialization.Serializable
 
 /**
@@ -14,7 +15,7 @@ data class Hotkey(val modifiers: Int, val keyCode: Int) {
             if (modifiers and MOD_CONTROL != 0) add("Ctrl")
             if (modifiers and MOD_ALT != 0) add("Alt")
             if (modifiers and MOD_SHIFT != 0) add("Shift")
-            if (modifiers and MOD_WIN != 0) add("Win")
+            if (modifiers and MOD_WIN != 0) add(if (Os.isWindows) "Win" else "Super")
             add(keyName(keyCode))
         }.joinToString("+")
 

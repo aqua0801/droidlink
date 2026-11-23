@@ -145,6 +145,7 @@
     <string name="hotkey_active">Active</string>
     <string name="hotkey_conflict">Another program already uses this combination. Please choose another.</string>
     <string name="hotkey_unsupported">Global hotkeys are not supported on this system yet.</string>
+    <string name="hotkey_unsupported_wayland">Wayland doesn’t let apps register global hotkeys. Log in with an X11 session to use them.</string>
     <string name="hotkey_inactive">Active only when the matching mode above is selected.</string>
     <string name="settings_battery">Phone battery alerts</string>
     <string name="alert_battery_low">Low battery alert</string>

@@ -20,8 +20,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -55,14 +55,15 @@ import io.github.aqua0801.droidlink.desktop.hotkey.Hotkey
 import io.github.aqua0801.droidlink.desktop.hotkey.HotkeyAction
 import io.github.aqua0801.droidlink.desktop.hotkey.HotkeyStatus
 import io.github.aqua0801.droidlink.desktop.platform.FileReveal
+import io.github.aqua0801.droidlink.desktop.platform.GlobalHotkeys
 import io.github.aqua0801.droidlink.desktop.platform.chooseFolder
 import io.github.aqua0801.droidlink.desktop.resources.*
 import io.github.aqua0801.droidlink.shared.settings.AppLanguage
 import io.github.aqua0801.droidlink.shared.settings.ThemeMode
-import org.jetbrains.compose.resources.StringResource
-import org.jetbrains.compose.resources.stringResource
 import java.awt.event.KeyEvent as AwtKeyEvent
 import kotlin.math.roundToInt
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun SettingsScreen(controller: DesktopController, onBack: () -> Unit) {
@@ -363,6 +364,8 @@ private fun HotkeyField(
             !inUse -> stringResource(Res.string.hotkey_inactive) to false
             status == HotkeyStatus.ACTIVE -> stringResource(Res.string.hotkey_active) to false
             status == HotkeyStatus.CONFLICT -> stringResource(Res.string.hotkey_conflict) to true
+            status == HotkeyStatus.UNSUPPORTED && GlobalHotkeys.blockedByWayland ->
+                stringResource(Res.string.hotkey_unsupported_wayland) to true
             status == HotkeyStatus.UNSUPPORTED -> stringResource(Res.string.hotkey_unsupported) to true
             else -> "" to false
         }
