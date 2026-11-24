@@ -69,7 +69,7 @@ class LinkService : LifecycleService() {
         lifecycleScope.launch {
             graph.link.state.collect { state ->
                 getSystemService(NotificationManager::class.java)
-                    .notify(NOTIFICATION_ID, buildNotification(describe(state), retryOnTap = state is LinkState.Disconnected))
+                    .notify(NOTIFICATION_ID, buildNotification(describe(state), actionFor(state)))
             }
         }
 
@@ -95,6 +95,8 @@ class LinkService : LifecycleService() {
             // A null intent means the system restarted us after killing the process.
             intent == null -> graph.link.resumeIfNeeded()
             intent.action == ACTION_RETRY -> graph.link.retryIfGaveUp()
+            // Stops this service too.
+            intent.action == ACTION_DISCONNECT -> graph.link.disconnect()
         }
         return START_STICKY
     }
@@ -119,11 +121,20 @@ class LinkService : LifecycleService() {
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
+    /** The notification button for each state: disconnect while connected, reconnect after giving up. */
+    private enum class NotificationAction { NONE, RETRY, DISCONNECT }
+
+    private fun actionFor(state: LinkState) = when (state) {
+        is LinkState.Connected -> NotificationAction.DISCONNECT
+        is LinkState.Disconnected -> NotificationAction.RETRY
+        else -> NotificationAction.NONE
+    }
+
     /**
-     * With [retryOnTap] a "reconnect" action is added. Tapping the body still opens the app,
-     * which also retries (MainActivity.onResume), so either way a tap reconnects.
+     * Tapping the body opens the app; after giving up, that also retries (MainActivity.onResume),
+     * so either way a tap reconnects.
      */
-    private fun buildNotification(text: String, retryOnTap: Boolean = false): Notification {
+    private fun buildNotification(text: String, action: NotificationAction = NotificationAction.NONE): Notification {
         val openApp = PendingIntent.getActivity(
             this,
             0,
@@ -138,22 +149,26 @@ class LinkService : LifecycleService() {
             .setOnlyAlertOnce(true)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setContentIntent(openApp)
-        if (retryOnTap) {
-            val retry = PendingIntent.getService(
-                this,
-                1,
-                Intent(this, LinkService::class.java).setAction(ACTION_RETRY),
-                PendingIntent.FLAG_IMMUTABLE,
-            )
-            builder.addAction(0, getString(R.string.action_reconnect), retry)
+        when (action) {
+            NotificationAction.RETRY -> builder.addAction(0, getString(R.string.action_reconnect), serviceIntent(1, ACTION_RETRY))
+            NotificationAction.DISCONNECT -> builder.addAction(0, getString(R.string.action_disconnect), serviceIntent(2, ACTION_DISCONNECT))
+            NotificationAction.NONE -> Unit
         }
         return builder.build()
     }
+
+    private fun serviceIntent(requestCode: Int, action: String): PendingIntent = PendingIntent.getService(
+        this,
+        requestCode,
+        Intent(this, LinkService::class.java).setAction(action),
+        PendingIntent.FLAG_IMMUTABLE,
+    )
 
     companion object {
         private const val CHANNEL_ID = "link"
         private const val NOTIFICATION_ID = 1
         private const val ACTION_RETRY = "io.github.aqua0801.droidlink.action.RETRY_LINK"
+        private const val ACTION_DISCONNECT = "io.github.aqua0801.droidlink.action.DISCONNECT_LINK"
 
         fun start(context: Context) {
             ContextCompat.startForegroundService(context, Intent(context, LinkService::class.java))
